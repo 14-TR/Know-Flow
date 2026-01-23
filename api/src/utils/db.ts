@@ -89,8 +89,23 @@ export const query = async (text: string, params?: unknown[]): Promise<QueryResu
       // Fetch the inserted row using lastInsertRowid
       const selectStmt = db.prepare(`SELECT * FROM ${table} WHERE rowid = ?`);
       rows = [selectStmt.get(info.lastInsertRowid)];
-    } else if ((isUpdate || isDelete) && hasReturning && table) {
-      // For UPDATE/DELETE with RETURNING, run the update first then fetch
+    } else if (isDelete && hasReturning && table) {
+      // For DELETE with RETURNING, fetch the row BEFORE deleting
+      const whereMatch = finalSql.match(/WHERE\s+(.+)$/i);
+
+      if (whereMatch) {
+        // First, fetch the row(s) that will be deleted
+        const selectSql = `SELECT * FROM ${table} WHERE ${whereMatch[1]}`;
+        const selectStmt = db.prepare(selectSql);
+        rows = selectStmt.all(...(params?.slice(-1) || [])); // Use the ID param
+      }
+
+      // Then delete
+      const stmt = db.prepare(finalSql);
+      const info = stmt.run(...(params || []));
+      rowCount = info.changes;
+    } else if (isUpdate && hasReturning && table) {
+      // For UPDATE with RETURNING, run the update first then fetch
       const whereMatch = finalSql.match(/WHERE\s+(.+)$/i);
 
       const stmt = db.prepare(finalSql);

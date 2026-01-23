@@ -5,6 +5,7 @@ import { nodeRoutes } from './routes/nodes.js';
 import { edgeRoutes } from './routes/edges.js';
 import { projectRoutes } from './routes/projects.js';
 import { projectNodeStatusRoutes } from './routes/projectNodeStatuses.js';
+import { debugRoutes } from './routes/debug.js';
 import { initDatabase } from './utils/db.js';
 
 // Initialize database schema
@@ -27,6 +28,7 @@ app.use('/api/nodes', nodeRoutes);
 app.use('/api/edges', edgeRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/project-node-statuses', projectNodeStatusRoutes);
+app.use('/api/debug', debugRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {

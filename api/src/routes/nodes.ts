@@ -75,8 +75,8 @@ router.post('/', async (req: Request, res: Response) => {
         type,
         title,
         description || null,
-        form_schema || {},
-        metadata || {},
+        JSON.stringify(form_schema || {}),
+        JSON.stringify(metadata || {}),
         position_x || 0,
         position_y || 0
       ]
@@ -113,7 +113,16 @@ router.put('/:id', async (req: Request, res: Response) => {
            position_y = COALESCE($7, position_y)
        WHERE id = $8
        RETURNING *`,
-      [type, title, description, form_schema, metadata, position_x, position_y, id]
+      [
+        type,
+        title,
+        description,
+        form_schema ? JSON.stringify(form_schema) : null,
+        metadata ? JSON.stringify(metadata) : null,
+        position_x,
+        position_y,
+        id
+      ]
     );
 
     if (result.rows.length === 0) {

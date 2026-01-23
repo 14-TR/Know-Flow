@@ -4,6 +4,7 @@ import ProcessEditor from './pages/ProcessEditor';
 import ProjectTracker from './pages/ProjectTracker';
 import ProcessList from './pages/ProcessList';
 import ProjectList from './pages/ProjectList';
+import DatabaseViewer from './pages/DatabaseViewer';
 
 export default function App() {
   const location = useLocation();
@@ -25,6 +26,12 @@ export default function App() {
           >
             Projects
           </Link>
+          <Link
+            to="/database"
+            className={location.pathname === '/database' ? 'active' : ''}
+          >
+            Database
+          </Link>
         </nav>
       </header>
       <Routes>
@@ -32,6 +39,7 @@ export default function App() {
         <Route path="/process/:id" element={<ProcessEditor />} />
         <Route path="/projects" element={<ProjectList />} />
         <Route path="/project/:id" element={<ProjectTracker />} />
+        <Route path="/database" element={<DatabaseViewer />} />
       </Routes>
     </div>
   );
