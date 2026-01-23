@@ -6,17 +6,19 @@ An interactive, editable context graph (decision flow chart) for tracking proces
 
 - **Process Authoring**: Create and modify master process graphs with nodes (tasks, decisions, start/end points) and edges
 - **Visual Graph Editor**: Drag-and-drop interface using React Flow with zoom, pan, and grid snapping
+- **Editable Edges**: Draggable orthogonal edges with smooth rounded corners - click and drag any segment to reshape the path
 - **Project Tracking**: Instantiate projects from process templates and track progress through the workflow
 - **Decision Capture**: Record decision outcomes that determine the path through the process
 - **Form-based Data Entry**: Configure custom forms for each node to capture structured data
 - **Progress Visualization**: Color-coded nodes show status (not started, in progress, complete)
+- **Database Viewer**: Built-in page to inspect database records with auto-refresh
 - **Audit Trail**: Track edge traversals and decision history
 
 ## Tech Stack
 
 - **Frontend**: React 18 + TypeScript + React Flow + Vite
 - **Backend**: Node.js + Express + TypeScript
-- **Database**: PostgreSQL 16
+- **Database**: SQLite (via better-sqlite3)
 - **Containerization**: Docker + Docker Compose
 
 ## Quick Start
@@ -41,11 +43,9 @@ An interactive, editable context graph (decision flow chart) for tracking proces
 3. Access the application:
    - **Frontend**: http://localhost:5173
    - **API**: http://localhost:3001/api
-   - **Database**: localhost:5432
+   - **Database Viewer**: http://localhost:5173/database
 
-### Default Credentials
-
-- Database: `knowflow` / `knowflow_secret`
+The SQLite database is automatically created and seeded with sample data on first run. Data is persisted in the `api/data/` directory.
 
 ## Project Structure
 
@@ -56,6 +56,9 @@ Know-Flow/
 │   │   ├── routes/         # Express route handlers
 │   │   ├── utils/          # Database connection
 │   │   └── index.ts        # Entry point
+│   ├── database/           # Database files
+│   │   ├── schema.sql      # SQLite schema
+│   │   └── seed.sqlite.sql # Sample data
 │   ├── Dockerfile
 │   ├── package.json
 │   └── tsconfig.json
@@ -69,9 +72,8 @@ Know-Flow/
 │   ├── Dockerfile
 │   ├── package.json
 │   └── vite.config.ts
-├── database/               # Database initialization
-│   ├── init.sql            # Schema creation
-│   └── seed.sql            # Sample data
+├── database/               # Database initialization (legacy)
+│   └── init.sql            # PostgreSQL schema (not used)
 └── docker-compose.yml      # Container orchestration
 ```
 
@@ -81,7 +83,7 @@ Know-Flow/
 
 - **processes**: Master process templates (id, name, description, version)
 - **nodes**: Graph nodes (id, process_id, type, title, description, form_schema, position)
-- **edges**: Connections between nodes (id, process_id, source_node_id, target_node_id, label, condition)
+- **edges**: Connections between nodes (id, process_id, source_node_id, target_node_id, label, condition, waypoints)
 - **projects**: Project instances (id, name, process_id, status)
 - **project_node_statuses**: Per-project node status tracking (status, decision_result, form_data)
 - **project_edge_traversals**: Audit trail of traversed edges
@@ -113,6 +115,7 @@ Know-Flow/
 - `GET /api/edges` - List edges (filter by process_id)
 - `POST /api/edges` - Create edge
 - `PUT /api/edges/:id` - Update edge
+- `PATCH /api/edges/:id/waypoints` - Update edge waypoints (for dragging)
 - `DELETE /api/edges/:id` - Delete edge
 
 ### Projects
@@ -125,6 +128,10 @@ Know-Flow/
 ### Project Node Statuses
 - `GET /api/project-node-statuses` - List statuses for a project
 - `PUT /api/project-node-statuses/:id` - Update node status
+
+### Debug
+- `GET /api/debug/tables` - Get all table names with row counts
+- `GET /api/debug/tables/:table` - Get contents of a specific table
 
 ## Development
 
@@ -144,13 +151,7 @@ npm install
 npm run dev
 ```
 
-**Database:**
-Start PostgreSQL and run the initialization scripts:
-```bash
-psql -U postgres -c "CREATE DATABASE knowflow"
-psql -U knowflow -d knowflow -f database/init.sql
-psql -U knowflow -d knowflow -f database/seed.sql
-```
+The SQLite database will be automatically created in `api/data/knowflow.db` when the API starts.
 
 ## Sample Data
 
