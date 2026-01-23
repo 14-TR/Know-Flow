@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: knowflow-api
+    environment:
+      NODE_ENV: development
+      DATA_DIR: /app/data
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./api:/app
+      - /app/node_modules
+      - ./database:/app/database
+      - api_data:/app/data
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: knowflow-client
+    environment:
+      VITE_API_URL: http://localhost:3001/api
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+
+volumes:
+  api_data:

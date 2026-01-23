@@ -1,0 +1,89 @@
+import { useState, useEffect } from 'react';
+import type { ProcessEdge } from '../types';
+
+interface Props {
+  edge: ProcessEdge;
+  onUpdate: (data: Partial<ProcessEdge>) => void;
+  onDelete: () => void;
+  onClose: () => void;
+}
+
+export default function EdgeEditorPanel({ edge, onUpdate, onDelete, onClose }: Props) {
+  const [label, setLabel] = useState(edge.label || '');
+  const [conditionField, setConditionField] = useState(
+    (edge.condition as Record<string, string>)?.field || ''
+  );
+  const [conditionValue, setConditionValue] = useState(
+    (edge.condition as Record<string, string>)?.value || ''
+  );
+
+  useEffect(() => {
+    setLabel(edge.label || '');
+    setConditionField((edge.condition as Record<string, string>)?.field || '');
+    setConditionValue((edge.condition as Record<string, string>)?.value || '');
+  }, [edge]);
+
+  const handleSave = () => {
+    onUpdate({
+      label: label || null,
+      condition:
+        conditionField && conditionValue
+          ? { field: conditionField, value: conditionValue }
+          : {},
+    });
+  };
+
+  return (
+    <div className="panel node-editor">
+      <div className="panel-header">
+        <h3>Edit Edge</h3>
+        <button className="btn btn-icon btn-secondary btn-sm" onClick={onClose}>
+          ✕
+        </button>
+      </div>
+      <div className="panel-content">
+        <div className="form-group">
+          <label>Label</label>
+          <input
+            type="text"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder='e.g., "Yes" or "No"'
+          />
+          <p style={{ fontSize: '0.7rem', color: '#666', marginTop: '0.25rem' }}>
+            This label appears on the edge and is used for decision routing.
+          </p>
+        </div>
+
+        <div className="form-group">
+          <label>Condition (Optional)</label>
+          <input
+            type="text"
+            value={conditionField}
+            onChange={(e) => setConditionField(e.target.value)}
+            placeholder="Field name"
+            style={{ marginBottom: '0.25rem' }}
+          />
+          <input
+            type="text"
+            value={conditionValue}
+            onChange={(e) => setConditionValue(e.target.value)}
+            placeholder="Expected value"
+          />
+          <p style={{ fontSize: '0.7rem', color: '#666', marginTop: '0.25rem' }}>
+            When the source node's form field matches this value, this edge is traversed.
+          </p>
+        </div>
+
+        <div className="form-actions" style={{ justifyContent: 'space-between' }}>
+          <button className="btn btn-danger btn-sm" onClick={onDelete}>
+            Delete Edge
+          </button>
+          <button className="btn btn-primary" onClick={handleSave}>
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
