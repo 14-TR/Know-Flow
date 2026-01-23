@@ -95,7 +95,33 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     // Get current active nodes
     const currentNodesResult = await query(
-      'SELECT * FROM get_project_current_nodes($1)',
+      `SELECT
+        n.id AS node_id,
+        n.title AS node_title,
+        n.type AS node_type,
+        COALESCE(pns.status, 'not_started') AS status
+      FROM nodes n
+      INNER JOIN projects p ON n.process_id = p.process_id
+      LEFT JOIN project_node_statuses pns ON pns.node_id = n.id AND pns.project_id = $1
+      WHERE p.id = $1
+      AND (
+        (n.type = 'start' AND pns.status IS NULL)
+        OR pns.status = 'in_progress'
+        OR (
+          COALESCE(pns.status, 'not_started') NOT IN ('complete', 'skipped')
+          AND NOT EXISTS (
+            SELECT 1 FROM edges e
+            INNER JOIN project_node_statuses pred_status
+              ON pred_status.node_id = e.source_node_id
+              AND pred_status.project_id = $1
+            WHERE e.target_node_id = n.id
+            AND pred_status.status NOT IN ('complete', 'skipped')
+          )
+          AND EXISTS (
+            SELECT 1 FROM edges e WHERE e.target_node_id = n.id
+          )
+        )
+      )`,
       [id]
     );
 

@@ -39,3 +39,10 @@ coverage/
 # Misc
 *.tsbuildinfo
 .eslintcache
+
+# SQLite database
+*.db
+*.db-wal
+*.db-shm
+data/
+api/data/

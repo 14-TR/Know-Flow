@@ -3,6 +3,26 @@ import { query } from '../utils/db.js';
 
 const router = Router();
 
+// Helper to parse JSON fields that SQLite returns as strings
+function parseJsonFields(row: Record<string, unknown>, fields: string[]): Record<string, unknown> {
+  if (!row) return row;
+  const parsed = { ...row };
+  for (const field of fields) {
+    if (typeof parsed[field] === 'string') {
+      try {
+        parsed[field] = JSON.parse(parsed[field] as string);
+      } catch {
+        parsed[field] = field === 'waypoints' ? [] : {};
+      }
+    }
+    // Ensure waypoints is always an array
+    if (field === 'waypoints' && !Array.isArray(parsed[field])) {
+      parsed[field] = [];
+    }
+  }
+  return parsed;
+}
+
 // GET all processes
 router.get('/', async (req: Request, res: Response) => {
   try {
@@ -39,10 +59,18 @@ router.get('/:id', async (req: Request, res: Response) => {
       [id]
     );
 
+    // Parse JSON fields for nodes and edges
+    const nodes = nodesResult.rows.map((row) =>
+      parseJsonFields(row as Record<string, unknown>, ['form_schema', 'metadata'])
+    );
+    const edges = edgesResult.rows.map((row) =>
+      parseJsonFields(row as Record<string, unknown>, ['condition', 'waypoints'])
+    );
+
     res.json({
       ...processResult.rows[0],
-      nodes: nodesResult.rows,
-      edges: edgesResult.rows,
+      nodes,
+      edges,
     });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
@@ -129,11 +157,29 @@ router.get('/:id/downstream/:nodeId', async (req: Request, res: Response) => {
     const { id, nodeId } = req.params;
 
     const result = await query(
-      `SELECT n.*, ds.depth, ds.path
-       FROM get_downstream_nodes($1) ds
-       JOIN nodes n ON n.id = ds.node_id
-       WHERE n.process_id = $2
-       ORDER BY ds.depth`,
+      `WITH RECURSIVE downstream AS (
+        SELECT
+          e.target_node_id AS node_id,
+          1 AS depth,
+          e.source_node_id || ',' || e.target_node_id AS path
+        FROM edges e
+        WHERE e.source_node_id = $1
+
+        UNION ALL
+
+        SELECT
+          e.target_node_id,
+          d.depth + 1,
+          d.path || ',' || e.target_node_id
+        FROM edges e
+        INNER JOIN downstream d ON e.source_node_id = d.node_id
+        WHERE instr(d.path, e.target_node_id) = 0
+      )
+      SELECT DISTINCT n.*, d.depth, d.path
+      FROM downstream d
+      JOIN nodes n ON n.id = d.node_id
+      WHERE n.process_id = $2
+      ORDER BY d.depth`,
       [nodeId, id]
     );
 

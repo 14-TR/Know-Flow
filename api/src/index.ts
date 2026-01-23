@@ -5,6 +5,10 @@ import { nodeRoutes } from './routes/nodes.js';
 import { edgeRoutes } from './routes/edges.js';
 import { projectRoutes } from './routes/projects.js';
 import { projectNodeStatusRoutes } from './routes/projectNodeStatuses.js';
+import { initDatabase } from './utils/db.js';
+
+// Initialize database schema
+initDatabase();
 
 const app = express();
 const PORT = process.env.PORT || 3001;

@@ -74,6 +74,12 @@ export const updateEdge = (id: string, data: Partial<ProcessEdge>) =>
     body: JSON.stringify(data),
   });
 
+export const updateEdgeWaypoints = (id: string, waypoints: { x: number; y: number }[]) =>
+  fetchApi<ProcessEdge>(`/edges/${id}/waypoints`, {
+    method: 'PATCH',
+    body: JSON.stringify({ waypoints }),
+  });
+
 export const deleteEdge = (id: string) =>
   fetchApi<{ message: string }>(`/edges/${id}`, { method: 'DELETE' });
 

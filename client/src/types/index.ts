@@ -23,6 +23,11 @@ export interface ProcessNode {
   updated_at: string;
 }
 
+export interface Waypoint {
+  x: number;
+  y: number;
+}
+
 export interface ProcessEdge {
   id: string;
   process_id: string;
@@ -30,6 +35,7 @@ export interface ProcessEdge {
   target_node_id: string;
   label: string | null;
   condition: Record<string, unknown>;
+  waypoints: Waypoint[];
   created_at: string;
 }
 

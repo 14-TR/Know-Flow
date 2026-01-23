@@ -147,9 +147,8 @@ router.put('/:id', async (req: Request, res: Response) => {
 
       if (edgeResult.rows.length > 0) {
         await client.query(
-          `INSERT INTO project_edge_traversals (project_id, edge_id)
-           VALUES ($1, $2)
-           ON CONFLICT DO NOTHING`,
+          `INSERT OR IGNORE INTO project_edge_traversals (project_id, edge_id)
+           VALUES ($1, $2)`,
           [current.project_id, edgeResult.rows[0].id]
         );
       }

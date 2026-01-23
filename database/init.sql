@@ -37,12 +37,31 @@ CREATE TABLE edges (
     target_node_id UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
     label VARCHAR(255),
     condition JSONB DEFAULT '{}',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT edges_same_process CHECK (
-        (SELECT process_id FROM nodes WHERE id = source_node_id) =
-        (SELECT process_id FROM nodes WHERE id = target_node_id)
-    )
+    waypoints JSONB DEFAULT '[]',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Trigger function to validate edges belong to the same process
+CREATE OR REPLACE FUNCTION validate_edge_same_process()
+RETURNS TRIGGER AS $$
+DECLARE
+    source_process_id UUID;
+    target_process_id UUID;
+BEGIN
+    SELECT process_id INTO source_process_id FROM nodes WHERE id = NEW.source_node_id;
+    SELECT process_id INTO target_process_id FROM nodes WHERE id = NEW.target_node_id;
+
+    IF source_process_id != NEW.process_id OR target_process_id != NEW.process_id THEN
+        RAISE EXCEPTION 'Edge nodes must belong to the same process as the edge';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER validate_edge_process
+    BEFORE INSERT OR UPDATE ON edges
+    FOR EACH ROW EXECUTE FUNCTION validate_edge_same_process();
 
 -- Projects table: instances of a process for tracking
 CREATE TABLE projects (

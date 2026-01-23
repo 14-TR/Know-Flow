@@ -1,25 +1,6 @@
 version: '3.8'
 
 services:
-  db:
-    image: postgres:16-alpine
-    container_name: knowflow-db
-    environment:
-      POSTGRES_USER: knowflow
-      POSTGRES_PASSWORD: knowflow_secret
-      POSTGRES_DB: knowflow
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql
-      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U knowflow -d knowflow"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   api:
     build:
       context: ./api
@@ -27,16 +8,15 @@ services:
     container_name: knowflow-api
     environment:
       NODE_ENV: development
-      DATABASE_URL: postgres://knowflow:knowflow_secret@db:5432/knowflow
+      DATA_DIR: /app/data
       PORT: 3001
     ports:
       - "3001:3001"
-    depends_on:
-      db:
-        condition: service_healthy
     volumes:
       - ./api:/app
       - /app/node_modules
+      - ./database:/app/database
+      - api_data:/app/data
 
   client:
     build:
@@ -54,4 +34,4 @@ services:
       - /app/node_modules
 
 volumes:
-  postgres_data:
+  api_data:

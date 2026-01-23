@@ -8,6 +8,8 @@ import {
   addEdge,
   useNodesState,
   useEdgesState,
+  useReactFlow,
+  ReactFlowProvider,
   type Node,
   type Edge,
   type Connection,
@@ -26,10 +28,12 @@ import {
   deleteNode,
   createEdge,
   updateEdge,
+  updateEdgeWaypoints,
   deleteEdge,
 } from '../services/api';
-import type { Process, ProcessNode, ProcessEdge } from '../types';
+import type { Process, ProcessNode, ProcessEdge, Waypoint } from '../types';
 import CustomNode from '../components/CustomNode';
+import EditableEdge from '../components/EditableEdge';
 import NodeEditorPanel from '../components/NodeEditorPanel';
 import EdgeEditorPanel from '../components/EdgeEditorPanel';
 
@@ -37,9 +41,116 @@ const nodeTypes = {
   custom: CustomNode,
 };
 
-export default function ProcessEditor() {
+const edgeTypes = {
+  editable: EditableEdge,
+};
+
+// Layout algorithm types
+type LayoutDirection = 'vertical' | 'horizontal';
+
+// Simple layout algorithm - arranges nodes by depth from start nodes
+function calculateLayout(
+  nodes: Node[],
+  edges: Edge[],
+  direction: LayoutDirection
+): Node[] {
+  if (nodes.length === 0) return nodes;
+
+  // Build adjacency map
+  const outgoing = new Map<string, string[]>();
+  const incoming = new Map<string, string[]>();
+
+  nodes.forEach((n) => {
+    outgoing.set(n.id, []);
+    incoming.set(n.id, []);
+  });
+
+  edges.forEach((e) => {
+    outgoing.get(e.source)?.push(e.target);
+    incoming.get(e.target)?.push(e.source);
+  });
+
+  // Find start nodes (no incoming edges or type='start')
+  const startNodes = nodes.filter(
+    (n) => incoming.get(n.id)?.length === 0 || n.data?.type === 'start'
+  );
+
+  // BFS to calculate depth (handles cycles by tracking visited nodes)
+  const depths = new Map<string, number>();
+  const visited = new Set<string>();
+  const queue: { id: string; depth: number }[] = [];
+
+  startNodes.forEach((n) => {
+    queue.push({ id: n.id, depth: 0 });
+    depths.set(n.id, 0);
+  });
+
+  while (queue.length > 0) {
+    const { id, depth } = queue.shift()!;
+
+    // Skip if already fully processed (prevents infinite loops from cycles)
+    if (visited.has(id)) continue;
+    visited.add(id);
+
+    const children = outgoing.get(id) || [];
+
+    children.forEach((childId) => {
+      const existingDepth = depths.get(childId);
+      if (existingDepth === undefined) {
+        depths.set(childId, depth + 1);
+        queue.push({ id: childId, depth: depth + 1 });
+      }
+    });
+  }
+
+  // Handle disconnected nodes
+  nodes.forEach((n) => {
+    if (!depths.has(n.id)) {
+      depths.set(n.id, 0);
+    }
+  });
+
+  // Group nodes by depth
+  const nodesByDepth = new Map<number, Node[]>();
+  nodes.forEach((n) => {
+    const d = depths.get(n.id) || 0;
+    if (!nodesByDepth.has(d)) nodesByDepth.set(d, []);
+    nodesByDepth.get(d)!.push(n);
+  });
+
+  // Position nodes
+  const spacing = { x: 250, y: 150 };
+  const startOffset = { x: 100, y: 100 };
+
+  return nodes.map((n) => {
+    const depth = depths.get(n.id) || 0;
+    const nodesAtDepth = nodesByDepth.get(depth) || [];
+    const indexAtDepth = nodesAtDepth.indexOf(n);
+    const countAtDepth = nodesAtDepth.length;
+
+    // Center nodes at each depth
+    const offset = ((countAtDepth - 1) / 2) * spacing[direction === 'vertical' ? 'x' : 'y'];
+
+    let x: number, y: number;
+    if (direction === 'vertical') {
+      x = startOffset.x + indexAtDepth * spacing.x - offset + (countAtDepth - 1) * spacing.x / 2;
+      y = startOffset.y + depth * spacing.y;
+    } else {
+      x = startOffset.x + depth * spacing.x;
+      y = startOffset.y + indexAtDepth * spacing.y - offset + (countAtDepth - 1) * spacing.y / 2;
+    }
+
+    return {
+      ...n,
+      position: { x, y },
+    };
+  });
+}
+
+function ProcessEditorInner() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { fitView } = useReactFlow();
   const [process, setProcess] = useState<Process | null>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -47,12 +158,23 @@ export default function ProcessEditor() {
   const [selectedEdge, setSelectedEdge] = useState<ProcessEdge | null>(null);
   const [loading, setLoading] = useState(true);
   const saveTimeout = useRef<number | null>(null);
+  const waypointsSaveTimeout = useRef<number | null>(null);
 
-  useEffect(() => {
-    if (id) loadProcess(id);
-  }, [id]);
+  // Handler for waypoint changes from EditableEdge
+  const handleWaypointsChange = useCallback(
+    (edgeId: string, waypoints: Waypoint[]) => {
+      // Debounce save to backend
+      if (waypointsSaveTimeout.current) clearTimeout(waypointsSaveTimeout.current);
+      waypointsSaveTimeout.current = window.setTimeout(() => {
+        updateEdgeWaypoints(edgeId, waypoints).catch((error) => {
+          console.error('Failed to save waypoints:', error);
+        });
+      }, 300);
+    },
+    []
+  );
 
-  const loadProcess = async (processId: string) => {
+  const loadProcess = useCallback(async (processId: string) => {
     try {
       const data = await getProcess(processId);
       setProcess(data);
@@ -70,19 +192,96 @@ export default function ProcessEditor() {
         source: e.source_node_id,
         target: e.target_node_id,
         label: e.label || undefined,
-        type: 'smoothstep',
+        type: 'editable',
         animated: false,
-        data: { ...e },
+        data: { ...e, onWaypointsChange: handleWaypointsChange },
       }));
 
       setNodes(flowNodes);
       setEdges(flowEdges);
+
+      // Fit view after loading
+      setTimeout(() => {
+        fitView({ padding: 0.2, duration: 200 });
+      }, 100);
     } catch (error) {
       console.error('Failed to load process:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [setNodes, setEdges, handleWaypointsChange, fitView]);
+
+  // Layout functions
+  const handleAutoLayout = useCallback(
+    async (direction: LayoutDirection) => {
+      const layoutedNodes = calculateLayout(nodes, edges, direction);
+      setNodes(layoutedNodes);
+
+      // Clear all waypoints from edges since node positions changed
+      setEdges((eds) =>
+        eds.map((edge) => ({
+          ...edge,
+          data: { ...edge.data, waypoints: [] },
+        }))
+      );
+
+      // Save all positions to backend in parallel
+      try {
+        await Promise.all([
+          ...layoutedNodes.map((node) =>
+            updateNodePosition(node.id, node.position.x, node.position.y)
+          ),
+          // Clear waypoints in the database
+          ...edges.map((edge) => updateEdgeWaypoints(edge.id, [])),
+        ]);
+      } catch (error) {
+        console.error('Failed to save node positions:', error);
+      }
+
+      // Fit view after layout
+      setTimeout(() => fitView({ padding: 0.2 }), 50);
+    },
+    [nodes, edges, setNodes, setEdges, fitView]
+  );
+
+  const handleFitView = useCallback(() => {
+    // Small delay to ensure DOM is ready
+    requestAnimationFrame(() => {
+      fitView({ padding: 0.2, duration: 300 });
+    });
+  }, [fitView]);
+
+  const handleReset = useCallback(async () => {
+    if (id) {
+      setLoading(true);
+      setSelectedNode(null);
+      setSelectedEdge(null);
+
+      // Load the process
+      await loadProcess(id);
+
+      // Clear all waypoints from edges
+      setEdges((eds) =>
+        eds.map((edge) => ({
+          ...edge,
+          data: { ...edge.data, waypoints: [] },
+        }))
+      );
+
+      // Clear waypoints in the database
+      try {
+        await Promise.all(
+          edges.map((edge) => updateEdgeWaypoints(edge.id, []))
+        );
+      } catch (error) {
+        console.error('Failed to clear waypoints:', error);
+      }
+    }
+  }, [id, loadProcess, edges, setEdges]);
+
+  useEffect(() => {
+    if (id) loadProcess(id);
+  }, [id, loadProcess]);
 
   const handleNodesChange = useCallback(
     (changes: NodeChange<Node>[]) => {
@@ -125,8 +324,8 @@ export default function ProcessEditor() {
             {
               ...connection,
               id: newEdge.id,
-              type: 'smoothstep',
-              data: { ...newEdge },
+              type: 'editable',
+              data: { ...newEdge, onWaypointsChange: handleWaypointsChange },
             },
             eds
           )
@@ -135,7 +334,7 @@ export default function ProcessEditor() {
         console.error('Failed to create edge:', error);
       }
     },
-    [id, setEdges]
+    [id, setEdges, handleWaypointsChange]
   );
 
   const handleNodeClick = useCallback(
@@ -290,9 +489,12 @@ export default function ProcessEditor() {
           onEdgeClick={handleEdgeClick}
           onPaneClick={handlePaneClick}
           nodeTypes={nodeTypes}
-          fitView
+          edgeTypes={edgeTypes}
+          edgesFocusable
+          edgesReconnectable
           snapToGrid
           snapGrid={[10, 10]}
+          defaultEdgeOptions={{ type: 'editable' }}
         >
           <Controls />
           <MiniMap />
@@ -337,6 +539,41 @@ export default function ProcessEditor() {
               </button>
             </div>
           </Panel>
+
+          <Panel position="top-right">
+            <div className="panel toolbar layout-toolbar">
+              <span className="toolbar-label">Layout:</span>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => handleAutoLayout('vertical')}
+                title="Arrange nodes top to bottom"
+              >
+                ↓ Vertical
+              </button>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => handleAutoLayout('horizontal')}
+                title="Arrange nodes left to right"
+              >
+                → Horizontal
+              </button>
+              <div style={{ borderLeft: '1px solid #ddd', height: 24, margin: '0 0.5rem' }} />
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={handleFitView}
+                title="Fit all nodes in view"
+              >
+                ⊡ Fit
+              </button>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={handleReset}
+                title="Reload graph from server"
+              >
+                ↺ Reset
+              </button>
+            </div>
+          </Panel>
         </ReactFlow>
 
         {selectedNode && (
@@ -358,5 +595,14 @@ export default function ProcessEditor() {
         )}
       </div>
     </div>
+  );
+}
+
+// Wrapper component with ReactFlowProvider
+export default function ProcessEditor() {
+  return (
+    <ReactFlowProvider>
+      <ProcessEditorInner />
+    </ReactFlowProvider>
   );
 }
