@@ -1,9 +1,10 @@
 # Know-Flow
 
-An interactive, editable context graph (decision flow chart) for tracking processes and decisions across multiple projects.
+An interactive, editable context graph (decision flow chart) for tracking processes and decisions across multiple projects. Includes Graph RAG capabilities for LLM/IDE integration.
 
 ## Features
 
+### Core Features
 - **Process Authoring**: Create and modify master process graphs with nodes (tasks, decisions, start/end points) and edges
 - **Visual Graph Editor**: Drag-and-drop interface using React Flow with zoom, pan, and grid snapping
 - **Editable Edges**: Draggable orthogonal edges with smooth rounded corners - click and drag any segment to reshape the path
@@ -13,6 +14,19 @@ An interactive, editable context graph (decision flow chart) for tracking proces
 - **Progress Visualization**: Color-coded nodes show status (not started, in progress, complete)
 - **Database Viewer**: Built-in page to inspect database records with auto-refresh
 - **Audit Trail**: Track edge traversals and decision history
+
+### Graph RAG Features
+- **Graph Search**: Search nodes across all processes by title, description, or content
+- **Neighborhood Exploration**: Explore nodes and their connections up to N hops away
+- **Path Finding**: Find all paths between two nodes in a process
+- **Subgraph Extraction**: Extract downstream/upstream subgraphs from starting nodes
+- **Context Builder**: Build custom context from selected nodes for RAG pipelines
+- **Multiple Export Formats**: Export graphs as JSON, Markdown, Graphviz DOT, Mermaid, or LLM-optimized context
+
+### MCP Server (IDE Integration)
+- **Model Context Protocol**: Full MCP server for Claude/LLM integration
+- **8 Tools Available**: search_graph, get_process_context, get_node_neighborhood, find_paths, get_subgraph, list_processes, get_project_history, list_projects
+- **Resource Browsing**: Access processes and projects as MCP resources
 
 ## Tech Stack
 
@@ -54,11 +68,9 @@ Know-Flow/
 ├── api/                    # Backend API
 │   ├── src/
 │   │   ├── routes/         # Express route handlers
+│   │   │   └── graphRag.ts # Graph RAG API endpoints
 │   │   ├── utils/          # Database connection
 │   │   └── index.ts        # Entry point
-│   ├── database/           # Database files
-│   │   ├── schema.sql      # SQLite schema
-│   │   └── seed.sqlite.sql # Sample data
 │   ├── Dockerfile
 │   ├── package.json
 │   └── tsconfig.json
@@ -66,14 +78,21 @@ Know-Flow/
 │   ├── src/
 │   │   ├── components/     # React components
 │   │   ├── pages/          # Page components
+│   │   │   └── GraphExplorer.tsx  # Graph RAG UI
 │   │   ├── services/       # API client
 │   │   ├── styles/         # CSS styles
 │   │   └── types/          # TypeScript types
 │   ├── Dockerfile
 │   ├── package.json
 │   └── vite.config.ts
-├── database/               # Database initialization (legacy)
-│   └── init.sql            # PostgreSQL schema (not used)
+├── mcp-server/             # MCP Server for LLM integration
+│   ├── src/
+│   │   └── index.ts        # MCP server implementation
+│   ├── package.json
+│   └── tsconfig.json
+├── database/               # Database schema and seeds
+│   ├── schema.sql          # SQLite schema
+│   └── seed.sqlite.sql     # Sample data
 └── docker-compose.yml      # Container orchestration
 ```
 
@@ -133,6 +152,18 @@ Know-Flow/
 - `GET /api/debug/tables` - Get all table names with row counts
 - `GET /api/debug/tables/:table` - Get contents of a specific table
 
+### Graph RAG
+- `GET /api/graph/search?q=query` - Search nodes by title/description
+- `GET /api/graph/process/:id/context` - Get full process context
+- `GET /api/graph/node/:id/neighborhood?depth=2` - Get node and neighbors
+- `GET /api/graph/node/:id/paths-to/:targetId` - Find paths between nodes
+- `GET /api/graph/process/:id/subgraph?start_nodes=id1,id2&direction=downstream` - Extract subgraph
+- `POST /api/graph/context/build` - Build custom context from node IDs
+- `GET /api/graph/processes/summary` - Get summary of all processes
+- `GET /api/graph/project/:id/history` - Get project execution history
+- `GET /api/graph/export/process/:id?format=markdown` - Export process (json, markdown, dot, mermaid, llm-context)
+- `GET /api/graph/export/project/:id?format=markdown` - Export project (json, markdown, llm-context)
+
 ## Development
 
 ### Running Without Docker
@@ -159,6 +190,66 @@ The seed data includes a "Property Development Process" with:
 - 16 nodes representing steps from project initiation to certificate of occupancy
 - Decision points for annexation, zoning, site plan approval, permits, and inspections
 - A sample project "Oak Street Development" with initial progress
+
+## MCP Server Setup
+
+The Know-Flow MCP server enables LLMs like Claude to interact directly with your knowledge graphs.
+
+### Installation
+
+```bash
+cd mcp-server
+npm install
+npm run build
+```
+
+### Configuration for Claude Desktop
+
+Add to your Claude Desktop config (`~/.claude/claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "knowflow": {
+      "command": "node",
+      "args": ["/path/to/Know-Flow/mcp-server/dist/index.js"],
+      "env": {
+        "KNOWFLOW_DB_PATH": "/path/to/Know-Flow/api/data/knowflow.db"
+      }
+    }
+  }
+}
+```
+
+### Available MCP Tools
+
+| Tool | Description |
+|------|-------------|
+| `search_graph` | Search nodes by title, description, or content |
+| `get_process_context` | Get full context of a process graph |
+| `get_node_neighborhood` | Explore connected nodes up to N hops |
+| `find_paths` | Find all paths between two nodes |
+| `get_subgraph` | Extract subgraph from starting nodes |
+| `list_processes` | List all available processes |
+| `get_project_history` | Get project execution history and decisions |
+| `list_projects` | List all project instances |
+
+### Example Usage in Claude
+
+Once configured, you can ask Claude things like:
+- "Search for nodes related to 'approval' in the knowledge graph"
+- "Show me the full context of the Property Development process"
+- "Find all paths from the Start node to the Certificate of Occupancy"
+- "What decisions were made in the Oak Street Development project?"
+
+## Graph Explorer UI
+
+Access the Graph Explorer at http://localhost:5173/explorer to:
+- Search across all process nodes
+- Explore node neighborhoods visually
+- Find paths between nodes
+- Build custom contexts for RAG
+- Export graphs in multiple formats
 
 ## License
 

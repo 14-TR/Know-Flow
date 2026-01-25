@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import ProcessEditor from './pages/ProcessEditor';
 import ProjectTracker from './pages/ProjectTracker';
 import ProcessList from './pages/ProcessList';
 import ProjectList from './pages/ProjectList';
 import DatabaseViewer from './pages/DatabaseViewer';
+import { GraphExplorer } from './pages/GraphExplorer';
 
 export default function App() {
   const location = useLocation();
@@ -32,6 +32,12 @@ export default function App() {
           >
             Database
           </Link>
+          <Link
+            to="/explorer"
+            className={location.pathname === '/explorer' ? 'active' : ''}
+          >
+            Explorer
+          </Link>
         </nav>
       </header>
       <Routes>
@@ -40,6 +46,7 @@ export default function App() {
         <Route path="/projects" element={<ProjectList />} />
         <Route path="/project/:id" element={<ProjectTracker />} />
         <Route path="/database" element={<DatabaseViewer />} />
+        <Route path="/explorer" element={<GraphExplorer />} />
       </Routes>
     </div>
   );
