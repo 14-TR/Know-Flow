@@ -165,72 +165,254 @@ function EditableEdge({
   // Generate orthogonal waypoints based on source/target positions
   // Creates minimal waypoints - just the corner points needed for orthogonal routing
   const effectiveWaypoints = useMemo(() => {
-    if (waypoints.length > 0) return waypoints;
+    if (waypoints.length > 0) {
+      // When custom waypoints exist, adjust the first and last waypoints
+      // to maintain orthogonality with the current source/target positions
+      const adjusted = [...waypoints];
+
+      const sourceIsVertical = sourcePosition === Position.Top || sourcePosition === Position.Bottom;
+      const targetIsVertical = targetPosition === Position.Top || targetPosition === Position.Bottom;
+
+      // Adjust first waypoint to maintain orthogonality with source
+      if (adjusted.length > 0) {
+        if (sourceIsVertical) {
+          // Source exits vertically - first segment must be vertical, so align X
+          adjusted[0] = { ...adjusted[0], x: sourceX };
+        } else {
+          // Source exits horizontally - first segment must be horizontal, so align Y
+          adjusted[0] = { ...adjusted[0], y: sourceY };
+        }
+      }
+
+      // Adjust last waypoint to maintain orthogonality with target
+      if (adjusted.length > 0) {
+        const lastIdx = adjusted.length - 1;
+        if (targetIsVertical) {
+          // Target enters vertically - last segment must be vertical, so align X
+          adjusted[lastIdx] = { ...adjusted[lastIdx], x: targetX };
+        } else {
+          // Target enters horizontally - last segment must be horizontal, so align Y
+          adjusted[lastIdx] = { ...adjusted[lastIdx], y: targetY };
+        }
+      }
+
+      return adjusted;
+    }
 
     const minOffset = 50; // Minimum distance for terminal segments
 
     const sourceIsVertical = sourcePosition === Position.Top || sourcePosition === Position.Bottom;
     const targetIsVertical = targetPosition === Position.Top || targetPosition === Position.Bottom;
     const sourceGoingDown = sourcePosition === Position.Bottom;
+    const sourceGoingUp = sourcePosition === Position.Top;
     const sourceGoingRight = sourcePosition === Position.Right;
+    const sourceGoingLeft = sourcePosition === Position.Left;
     const targetFromTop = targetPosition === Position.Top;
+    const targetFromBottom = targetPosition === Position.Bottom;
     const targetFromLeft = targetPosition === Position.Left;
+    const targetFromRight = targetPosition === Position.Right;
 
     // For same-axis connections (both vertical or both horizontal)
     if (sourceIsVertical && targetIsVertical) {
-      // Both vertical - create path: down/up, horizontal, down/up
-      // Calculate the Y level for the horizontal segment
-      let horizontalY: number;
+      // Both vertical handles
 
       if (sourceGoingDown && targetFromTop) {
-        // Source going down, target entered from top (most common)
-        // Horizontal segment should be between them
-        horizontalY = Math.max(sourceY + minOffset, Math.min(targetY - minOffset, (sourceY + targetY) / 2));
-      } else if (!sourceGoingDown && !targetFromTop) {
-        // Source going up, target entered from bottom
-        horizontalY = Math.min(sourceY - minOffset, Math.max(targetY + minOffset, (sourceY + targetY) / 2));
-      } else if (sourceGoingDown && !targetFromTop) {
-        // Source going down, target entered from bottom - need to go around
-        horizontalY = Math.max(sourceY, targetY) + minOffset;
+        // Source exits down, target enters from top
+        if (targetY > sourceY + minOffset) {
+          // Target is below source - simple path with horizontal segment between them
+          const horizontalY = (sourceY + targetY) / 2;
+          return [
+            { x: sourceX, y: horizontalY },
+            { x: targetX, y: horizontalY },
+          ];
+        } else {
+          // Target is above or at same level as source - need to route around
+          // Go down from source, around to the side, up past target, then down to target
+          const bottomY = Math.max(sourceY, targetY) + minOffset;
+          const topY = targetY - minOffset;
+          const sideX = sourceX < targetX
+            ? Math.min(sourceX, targetX) - minOffset
+            : Math.max(sourceX, targetX) + minOffset;
+          return [
+            { x: sourceX, y: bottomY },      // Down from source
+            { x: sideX, y: bottomY },        // Horizontal to side
+            { x: sideX, y: topY },           // Up past target
+            { x: targetX, y: topY },         // Horizontal to above target
+          ];
+        }
+      } else if (sourceGoingUp && targetFromBottom) {
+        // Source exits up, target enters from bottom
+        if (targetY < sourceY - minOffset) {
+          // Target is above source - simple path
+          const horizontalY = (sourceY + targetY) / 2;
+          return [
+            { x: sourceX, y: horizontalY },
+            { x: targetX, y: horizontalY },
+          ];
+        } else {
+          // Target is below or at same level - need to route around
+          const topY = Math.min(sourceY, targetY) - minOffset;
+          const bottomY = targetY + minOffset;
+          const sideX = sourceX < targetX
+            ? Math.min(sourceX, targetX) - minOffset
+            : Math.max(sourceX, targetX) + minOffset;
+          return [
+            { x: sourceX, y: topY },         // Up from source
+            { x: sideX, y: topY },           // Horizontal to side
+            { x: sideX, y: bottomY },        // Down past target
+            { x: targetX, y: bottomY },      // Horizontal to below target
+          ];
+        }
+      } else if (sourceGoingDown && targetFromBottom) {
+        // Source going down, target entered from bottom - both going down direction
+        const bottomY = Math.max(sourceY, targetY) + minOffset;
+        return [
+          { x: sourceX, y: bottomY },
+          { x: targetX, y: bottomY },
+        ];
       } else {
-        // Source going up, target entered from top - need to go around
-        horizontalY = Math.min(sourceY, targetY) - minOffset;
+        // Source going up, target entered from top - both going up direction
+        const topY = Math.min(sourceY, targetY) - minOffset;
+        return [
+          { x: sourceX, y: topY },
+          { x: targetX, y: topY },
+        ];
       }
-
-      // Two corner points
-      return [
-        { x: sourceX, y: horizontalY },
-        { x: targetX, y: horizontalY },
-      ];
     }
 
     if (!sourceIsVertical && !targetIsVertical) {
-      // Both horizontal - create path: left/right, vertical, left/right
-      let verticalX: number;
+      // Both horizontal handles
 
       if (sourceGoingRight && targetFromLeft) {
-        verticalX = Math.max(sourceX + minOffset, Math.min(targetX - minOffset, (sourceX + targetX) / 2));
-      } else if (!sourceGoingRight && !targetFromLeft) {
-        verticalX = Math.min(sourceX - minOffset, Math.max(targetX + minOffset, (sourceX + targetX) / 2));
-      } else if (sourceGoingRight && !targetFromLeft) {
-        verticalX = Math.max(sourceX, targetX) + minOffset;
+        // Source exits right, target enters from left
+        if (targetX > sourceX + minOffset) {
+          // Target is to the right - simple path
+          const verticalX = (sourceX + targetX) / 2;
+          return [
+            { x: verticalX, y: sourceY },
+            { x: verticalX, y: targetY },
+          ];
+        } else {
+          // Target is to the left or at same position - need to route around
+          const rightX = Math.max(sourceX, targetX) + minOffset;
+          const leftX = targetX - minOffset;
+          const sideY = sourceY < targetY
+            ? Math.min(sourceY, targetY) - minOffset
+            : Math.max(sourceY, targetY) + minOffset;
+          return [
+            { x: rightX, y: sourceY },       // Right from source
+            { x: rightX, y: sideY },         // Vertical to side
+            { x: leftX, y: sideY },          // Left past target
+            { x: leftX, y: targetY },        // Vertical to left of target
+          ];
+        }
+      } else if (sourceGoingLeft && targetFromRight) {
+        // Source exits left, target enters from right
+        if (targetX < sourceX - minOffset) {
+          // Target is to the left - simple path
+          const verticalX = (sourceX + targetX) / 2;
+          return [
+            { x: verticalX, y: sourceY },
+            { x: verticalX, y: targetY },
+          ];
+        } else {
+          // Target is to the right or at same position - need to route around
+          const leftX = Math.min(sourceX, targetX) - minOffset;
+          const rightX = targetX + minOffset;
+          const sideY = sourceY < targetY
+            ? Math.min(sourceY, targetY) - minOffset
+            : Math.max(sourceY, targetY) + minOffset;
+          return [
+            { x: leftX, y: sourceY },        // Left from source
+            { x: leftX, y: sideY },          // Vertical to side
+            { x: rightX, y: sideY },         // Right past target
+            { x: rightX, y: targetY },       // Vertical to right of target
+          ];
+        }
+      } else if (sourceGoingRight && targetFromRight) {
+        // Both going right direction
+        const rightX = Math.max(sourceX, targetX) + minOffset;
+        return [
+          { x: rightX, y: sourceY },
+          { x: rightX, y: targetY },
+        ];
       } else {
-        verticalX = Math.min(sourceX, targetX) - minOffset;
+        // Both going left direction
+        const leftX = Math.min(sourceX, targetX) - minOffset;
+        return [
+          { x: leftX, y: sourceY },
+          { x: leftX, y: targetY },
+        ];
       }
-
-      return [
-        { x: verticalX, y: sourceY },
-        { x: verticalX, y: targetY },
-      ];
     }
 
-    // Mixed connections (one vertical, one horizontal) - just need one corner
+    // Mixed connections (one vertical, one horizontal)
     if (sourceIsVertical) {
-      // Source vertical, target horizontal - corner at (sourceX, targetY)
-      return [{ x: sourceX, y: targetY }];
+      // Source vertical, target horizontal
+      if (sourceGoingDown) {
+        if (targetFromLeft && targetX > sourceX) {
+          // Simple L-shape: down then right
+          return [{ x: sourceX, y: targetY }];
+        } else if (targetFromRight && targetX < sourceX) {
+          // Simple L-shape: down then left
+          return [{ x: sourceX, y: targetY }];
+        } else {
+          // Need to route around
+          const midY = Math.max(sourceY + minOffset, targetY + minOffset);
+          return [
+            { x: sourceX, y: midY },
+            { x: targetFromLeft ? targetX - minOffset : targetX + minOffset, y: midY },
+            { x: targetFromLeft ? targetX - minOffset : targetX + minOffset, y: targetY },
+          ];
+        }
+      } else {
+        // sourceGoingUp
+        if (targetFromLeft && targetX > sourceX) {
+          return [{ x: sourceX, y: targetY }];
+        } else if (targetFromRight && targetX < sourceX) {
+          return [{ x: sourceX, y: targetY }];
+        } else {
+          const midY = Math.min(sourceY - minOffset, targetY - minOffset);
+          return [
+            { x: sourceX, y: midY },
+            { x: targetFromLeft ? targetX - minOffset : targetX + minOffset, y: midY },
+            { x: targetFromLeft ? targetX - minOffset : targetX + minOffset, y: targetY },
+          ];
+        }
+      }
     } else {
-      // Source horizontal, target vertical - corner at (targetX, sourceY)
-      return [{ x: targetX, y: sourceY }];
+      // Source horizontal, target vertical
+      if (sourceGoingRight) {
+        if (targetFromTop && targetY > sourceY) {
+          // Simple L-shape: right then down
+          return [{ x: targetX, y: sourceY }];
+        } else if (targetFromBottom && targetY < sourceY) {
+          // Simple L-shape: right then up
+          return [{ x: targetX, y: sourceY }];
+        } else {
+          // Need to route around
+          const midX = Math.max(sourceX + minOffset, targetX + minOffset);
+          return [
+            { x: midX, y: sourceY },
+            { x: midX, y: targetFromTop ? targetY - minOffset : targetY + minOffset },
+            { x: targetX, y: targetFromTop ? targetY - minOffset : targetY + minOffset },
+          ];
+        }
+      } else {
+        // sourceGoingLeft
+        if (targetFromTop && targetY > sourceY) {
+          return [{ x: targetX, y: sourceY }];
+        } else if (targetFromBottom && targetY < sourceY) {
+          return [{ x: targetX, y: sourceY }];
+        } else {
+          const midX = Math.min(sourceX - minOffset, targetX - minOffset);
+          return [
+            { x: midX, y: sourceY },
+            { x: midX, y: targetFromTop ? targetY - minOffset : targetY + minOffset },
+            { x: targetX, y: targetFromTop ? targetY - minOffset : targetY + minOffset },
+          ];
+        }
+      }
     }
   }, [waypoints, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition]);
 

@@ -321,7 +321,6 @@ export type ExportFormat = 'json' | 'markdown' | 'dot' | 'mermaid' | 'llm-contex
 export type ProjectExportFormat = 'json' | 'markdown' | 'llm-context';
 
 // Export functions - these return raw text/data, not JSON
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 export const exportProcess = async (
   processId: string,
