@@ -90,6 +90,9 @@ router.post('/', async (req: Request, res: Response) => {
       waypoints
     } = req.body;
 
+    console.log('=== EDGE CREATION DEBUG ===');
+    console.log('Received:', { process_id, source_node_id, target_node_id });
+
     if (!process_id || !source_node_id || !target_node_id) {
       return res.status(400).json({
         error: 'process_id, source_node_id, and target_node_id are required'
@@ -98,12 +101,22 @@ router.post('/', async (req: Request, res: Response) => {
 
     // Verify both nodes belong to the same process
     const nodesCheck = await query(
-      `SELECT COUNT(*) FROM nodes
+      `SELECT COUNT(*) as count FROM nodes
        WHERE id IN ($1, $2) AND process_id = $3`,
       [source_node_id, target_node_id, process_id]
     );
 
-    if (parseInt(nodesCheck.rows[0].count) !== 2) {
+    console.log('Nodes check result:', nodesCheck.rows[0]);
+
+    // Also check what nodes exist with these IDs
+    const nodeDetails = await query(
+      `SELECT id, process_id FROM nodes WHERE id IN ($1, $2)`,
+      [source_node_id, target_node_id]
+    );
+    console.log('Found nodes:', nodeDetails.rows);
+    console.log('=== END DEBUG ===');
+
+    if (parseInt((nodesCheck.rows[0] as { count: string }).count) !== 2) {
       return res.status(400).json({
         error: 'Both nodes must belong to the specified process'
       });
