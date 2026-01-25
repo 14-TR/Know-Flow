@@ -20,9 +20,11 @@ function CustomNode({ data, selected }: NodeProps) {
           borderRadius: '20px',
         };
       case 'decision':
+        // Decision nodes use CSS ::before pseudo-element for diamond shape
+        // to avoid clipping the handles with clip-path
         return {
-          background: '#fff8e1',
-          borderColor: '#ff9800',
+          background: 'transparent',
+          borderColor: 'transparent',
         };
       case 'task':
       default:
@@ -39,7 +41,7 @@ function CustomNode({ data, selected }: NodeProps) {
       style={{
         ...getNodeStyle(),
         padding: nodeData.type === 'decision' ? '15px 25px' : '10px 15px',
-        border: `2px solid ${getNodeStyle().borderColor}`,
+        border: nodeData.type === 'decision' ? 'none' : `2px solid ${getNodeStyle().borderColor}`,
         borderRadius: getNodeStyle().borderRadius || '8px',
         minWidth: 150,
         textAlign: 'center',
