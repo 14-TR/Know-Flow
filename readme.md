@@ -251,6 +251,10 @@ Access the Graph Explorer at http://localhost:5173/explorer to:
 - Build custom contexts for RAG
 - Export graphs in multiple formats
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for release notes and version history.
+
 ## License
 
 MIT
