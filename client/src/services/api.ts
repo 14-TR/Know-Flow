@@ -113,3 +113,266 @@ export const updateProjectNodeStatus = (
     method: 'PUT',
     body: JSON.stringify(data),
   });
+
+// Graph RAG API
+
+export interface GraphSearchResult {
+  query: string;
+  count: number;
+  results: Array<ProcessNode & { process_name: string; process_description: string | null }>;
+}
+
+export interface GraphContext {
+  process: { id: string; name: string; description: string | null };
+  nodes: Array<{
+    id: string;
+    type: string;
+    title: string;
+    description: string | null;
+    form_schema: Record<string, unknown>;
+    metadata: Record<string, unknown>;
+  }>;
+  edges: Array<{
+    id: string;
+    source_node_id: string;
+    target_node_id: string;
+    label: string | null;
+    condition: Record<string, unknown>;
+  }>;
+  paths?: string[][];
+  context_text?: string;
+}
+
+export interface NodeNeighborhood {
+  center: ProcessNode & { depth: number };
+  neighbors: Array<ProcessNode & { depth: number }>;
+  edges: Array<{
+    id: string;
+    source_node_id: string;
+    target_node_id: string;
+    label: string | null;
+  }>;
+  total_nodes: number;
+}
+
+export interface PathResult {
+  source: { id: string; title: string };
+  target: { id: string; title: string };
+  paths: Array<{
+    nodes: string[];
+    labels: (string | null)[];
+    node_titles: string[];
+    length: number;
+  }>;
+  total_paths: number;
+}
+
+export interface SubgraphResult {
+  process: { id: string; name: string };
+  start_nodes: string[];
+  direction: string;
+  depth: number;
+  nodes: Array<{
+    id: string;
+    type: string;
+    title: string;
+    description: string | null;
+  }>;
+  edges: Array<{
+    id: string;
+    source_node_id: string;
+    target_node_id: string;
+    label: string | null;
+  }>;
+  total_nodes: number;
+  total_edges: number;
+}
+
+export interface ProcessSummary {
+  id: string;
+  name: string;
+  description: string | null;
+  version: number;
+  node_count: number;
+  edge_count: number;
+  decision_count: number;
+  project_count: number;
+}
+
+export interface ProjectHistory {
+  project: Project;
+  node_statuses: Array<ProjectNodeStatus & {
+    node_title: string;
+    node_type: string;
+    node_description: string | null;
+  }>;
+  edge_traversals: Array<{
+    edge_id: string;
+    edge_label: string | null;
+    source_title: string;
+    target_title: string;
+    executed_at: string;
+  }>;
+  timeline: Array<{
+    type: 'node_started' | 'node_completed' | 'edge_traversed' | 'decision_made';
+    timestamp: string;
+    details: Record<string, unknown>;
+  }>;
+  stats: {
+    total_nodes: number;
+    completed: number;
+    in_progress: number;
+    skipped: number;
+    decisions_made: number;
+    edges_traversed: number;
+  };
+}
+
+export interface ContextBuildResult {
+  nodes: ProcessNode[];
+  edges: Array<{
+    id: string;
+    source_node_id: string;
+    target_node_id: string;
+    label: string | null;
+  }>;
+  context_text: string;
+  node_count: number;
+  edge_count: number;
+}
+
+// Graph RAG API functions
+
+export const searchGraph = (params: {
+  q: string;
+  type?: string;
+  process_id?: string;
+  limit?: number;
+}) => {
+  const searchParams = new URLSearchParams();
+  searchParams.set('q', params.q);
+  if (params.type) searchParams.set('type', params.type);
+  if (params.process_id) searchParams.set('process_id', params.process_id);
+  if (params.limit) searchParams.set('limit', params.limit.toString());
+  return fetchApi<GraphSearchResult>(`/graph/search?${searchParams.toString()}`);
+};
+
+export const getProcessContext = (
+  processId: string,
+  options?: { format?: 'json' | 'markdown' | 'text'; include_paths?: boolean }
+) => {
+  const params = new URLSearchParams();
+  if (options?.format) params.set('format', options.format);
+  if (options?.include_paths) params.set('include_paths', 'true');
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return fetchApi<GraphContext>(`/graph/process/${processId}/context${query}`);
+};
+
+export const getNodeNeighborhood = (nodeId: string, depth?: number) => {
+  const query = depth ? `?depth=${depth}` : '';
+  return fetchApi<NodeNeighborhood>(`/graph/node/${nodeId}/neighborhood${query}`);
+};
+
+export const findPaths = (
+  sourceNodeId: string,
+  targetNodeId: string,
+  options?: { max_paths?: number; max_length?: number }
+) => {
+  const params = new URLSearchParams();
+  if (options?.max_paths) params.set('max_paths', options.max_paths.toString());
+  if (options?.max_length) params.set('max_length', options.max_length.toString());
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return fetchApi<PathResult>(`/graph/node/${sourceNodeId}/paths-to/${targetNodeId}${query}`);
+};
+
+export const getSubgraph = (
+  processId: string,
+  startNodes: string[],
+  options?: { direction?: 'downstream' | 'upstream' | 'both'; depth?: number }
+) => {
+  const params = new URLSearchParams();
+  params.set('start_nodes', startNodes.join(','));
+  if (options?.direction) params.set('direction', options.direction);
+  if (options?.depth) params.set('depth', options.depth.toString());
+  return fetchApi<SubgraphResult>(`/graph/process/${processId}/subgraph?${params.toString()}`);
+};
+
+export const buildContext = (
+  nodeIds: string[],
+  options?: { include_neighbors?: boolean; format?: 'markdown' | 'text' }
+) =>
+  fetchApi<ContextBuildResult>('/graph/context/build', {
+    method: 'POST',
+    body: JSON.stringify({
+      node_ids: nodeIds,
+      include_neighbors: options?.include_neighbors ?? true,
+      format: options?.format ?? 'markdown',
+    }),
+  });
+
+export const getProcessesSummary = () =>
+  fetchApi<{ count: number; processes: ProcessSummary[] }>('/graph/processes/summary');
+
+export const getProjectHistory = (projectId: string) =>
+  fetchApi<ProjectHistory>(`/graph/project/${projectId}/history`);
+
+// Export types
+export type ExportFormat = 'json' | 'markdown' | 'dot' | 'mermaid' | 'llm-context';
+export type ProjectExportFormat = 'json' | 'markdown' | 'llm-context';
+
+// Export functions - these return raw text/data, not JSON
+
+export const exportProcess = async (
+  processId: string,
+  format: ExportFormat = 'json'
+): Promise<string> => {
+  const response = await fetch(
+    `${API_URL}/graph/export/process/${processId}?format=${format}`
+  );
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Export failed' }));
+    throw new Error(error.error || 'Export failed');
+  }
+
+  if (format === 'json') {
+    const data = await response.json();
+    return JSON.stringify(data, null, 2);
+  }
+
+  return response.text();
+};
+
+export const exportProject = async (
+  projectId: string,
+  format: ProjectExportFormat = 'json'
+): Promise<string> => {
+  const response = await fetch(
+    `${API_URL}/graph/export/project/${projectId}?format=${format}`
+  );
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Export failed' }));
+    throw new Error(error.error || 'Export failed');
+  }
+
+  if (format === 'json') {
+    const data = await response.json();
+    return JSON.stringify(data, null, 2);
+  }
+
+  return response.text();
+};
+
+// Helper to download exported content as a file
+export const downloadExport = (content: string, filename: string, mimeType: string) => {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};

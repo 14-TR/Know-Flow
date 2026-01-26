@@ -94,6 +94,7 @@ router.get('/:id', async (req: Request, res: Response) => {
     );
 
     // Get current active nodes
+    // Note: SQLite requires each ? placeholder to have its own parameter value
     const currentNodesResult = await query(
       `SELECT
         n.id AS node_id,
@@ -103,7 +104,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       FROM nodes n
       INNER JOIN projects p ON n.process_id = p.process_id
       LEFT JOIN project_node_statuses pns ON pns.node_id = n.id AND pns.project_id = $1
-      WHERE p.id = $1
+      WHERE p.id = $2
       AND (
         (n.type = 'start' AND pns.status IS NULL)
         OR pns.status = 'in_progress'
@@ -113,7 +114,7 @@ router.get('/:id', async (req: Request, res: Response) => {
             SELECT 1 FROM edges e
             INNER JOIN project_node_statuses pred_status
               ON pred_status.node_id = e.source_node_id
-              AND pred_status.project_id = $1
+              AND pred_status.project_id = $3
             WHERE e.target_node_id = n.id
             AND pred_status.status NOT IN ('complete', 'skipped')
           )
@@ -122,7 +123,7 @@ router.get('/:id', async (req: Request, res: Response) => {
           )
         )
       )`,
-      [id]
+      [id, id, id]
     );
 
     res.json({
@@ -156,7 +157,7 @@ router.post('/', async (req: Request, res: Response) => {
       `INSERT INTO projects (name, process_id, metadata)
        VALUES ($1, $2, $3)
        RETURNING *`,
-      [name, process_id, metadata || {}]
+      [name, process_id, JSON.stringify(metadata || {})]
     );
 
     const project = projectResult.rows[0];
@@ -169,15 +170,13 @@ router.post('/', async (req: Request, res: Response) => {
       [project.id, process_id]
     );
 
-    // Find and mark start nodes as ready
+    // Find and mark start nodes as ready (SQLite-compatible syntax)
     await client.query(
-      `UPDATE project_node_statuses pns
+      `UPDATE project_node_statuses
        SET status = 'not_started'
-       FROM nodes n
-       WHERE pns.node_id = n.id
-         AND pns.project_id = $1
-         AND n.type = 'start'`,
-      [project.id]
+       WHERE project_id = $1
+         AND node_id IN (SELECT id FROM nodes WHERE type = 'start' AND process_id = $2)`,
+      [project.id, process_id]
     );
 
     await client.query('COMMIT');
@@ -204,7 +203,7 @@ router.put('/:id', async (req: Request, res: Response) => {
            metadata = COALESCE($3, metadata)
        WHERE id = $4
        RETURNING *`,
-      [name, status, metadata, id]
+      [name, status, metadata ? JSON.stringify(metadata) : null, id]
     );
 
     if (result.rows.length === 0) {
