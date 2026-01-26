@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [Unreleased]
+## [1.1.0] - 2025-01-25
 
 ### Added
 - MIT License file
@@ -17,10 +17,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - SQLite compatibility for project creation (JSON.stringify metadata)
 - SQLite parameter placeholder handling (each `?` needs its own value)
 - PostgreSQL UPDATE...FROM syntax converted to SQLite-compatible subqueries
+- Orthogonal edge routing maintains alignment when nodes are dragged
 
 ---
 
-## [0.3.0] - 2025-01-25
+## [1.0.1] - 2025-01-25
 
 ### Added
 
@@ -70,7 +71,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [0.2.0] - 2025-01-24
+## [1.0.0] - 2025-01-24
 
 ### Added
 - Editable orthogonal edges with draggable waypoints
@@ -82,7 +83,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 - Edge creation issues with decision nodes (removed clip-path)
-- Edge routing maintains orthogonality when nodes are moved
 
 ### Changed
 - Migrated from PostgreSQL to SQLite for simpler deployment
@@ -91,7 +91,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [0.1.0] - 2025-01-23
+## [0.1.0] - 2025-01-23 (Beta)
 
 ### Added
 
@@ -135,6 +135,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 | Version | Date | Highlights |
 |---------|------|------------|
-| 0.3.0 | 2025-01-25 | Graph RAG API, MCP Server, Graph Explorer UI |
-| 0.2.0 | 2025-01-24 | Editable edges, SQLite migration |
-| 0.1.0 | 2025-01-23 | Initial MVP release |
+| 1.1.0 | 2025-01-25 | Bug fixes, documentation, license |
+| 1.0.1 | 2025-01-25 | Graph RAG API, MCP Server, Graph Explorer UI |
+| 1.0.0 | 2025-01-24 | Editable edges, SQLite migration |
+| 0.1.0 | 2025-01-23 | Initial MVP (beta) |
