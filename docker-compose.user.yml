@@ -1,0 +1,36 @@
+# Docker Compose for Know-Flow Users (non-admin)
+#
+# Users run this to access shared process templates while storing projects locally.
+#
+# Setup:
+#   1. Copy this file and .env.user.example to your machine
+#   2. Rename .env.user.example to .env
+#   3. Edit .env with your username and network path
+#   4. Run: docker-compose -f docker-compose.user.yml up
+#
+# Or just double-click start-knowflow.bat (Windows)
+
+services:
+  api:
+    build: ./api
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - DATA_DIR=/data
+      - ADMIN_DATA_DIR=/admin-templates
+      - KNOWFLOW_USER=${KNOWFLOW_USER:-user}
+    volumes:
+      # Local folder for user's projects
+      - ${LOCAL_DATA_DIR:-./data}:/data
+      # Network share for admin templates (read-only)
+      - ${ADMIN_SHARE_PATH:?Set ADMIN_SHARE_PATH in .env}:/admin-templates:ro
+
+  client:
+    build: ./client
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3001/api
+    depends_on:
+      - api

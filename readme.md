@@ -254,9 +254,92 @@ npm run start    # Run compiled server
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | 3001 | Backend API port |
-| `DATA_DIR` | `./data` | Directory for SQLite database |
+| `DATA_DIR` | `./data` | Local directory for user's projects |
+| `ADMIN_DATA_DIR` | `DATA_DIR/admin` | Path to admin templates (can be network share) |
+| `KNOWFLOW_USER` | `admin` | Username (use `admin` for template editing) |
 | `NODE_ENV` | development | Environment mode |
 | `VITE_API_URL` | `http://localhost:3001/api` | API URL for frontend |
+
+## Team Deployment (Shared Network Drive)
+
+Share Know-Flow across your organization. Admin creates process templates on a network share, users run locally and access those templates read-only.
+
+### Architecture
+
+```
+Network Share
+└── admin/
+    └── knowflow.db              # Shared templates (read-only for users)
+
+User's Local Machine
+└── data/
+    └── knowflow.db              # User's local projects
+```
+
+Network share paths by OS:
+- **Windows**: `\\SERVER\KnowFlow\admin` or `Z:\KnowFlow\admin`
+- **Mac**: `/Volumes/KnowFlow/admin`
+- **Linux**: `/mnt/shared/knowflow/admin`
+
+### Admin Setup
+
+Admin runs Know-Flow pointed at the network share:
+
+```cmd
+:: Windows
+set DATA_DIR=Z:\KnowFlow
+set KNOWFLOW_USER=admin
+docker-compose up --build
+```
+
+```bash
+# Linux/Mac
+DATA_DIR=/mnt/shared/knowflow KNOWFLOW_USER=admin docker-compose up --build
+```
+
+### User Setup
+
+Users just need Docker Desktop installed. IT can distribute these files:
+
+1. **Copy to user's machine:**
+   - `docker-compose.user.yml`
+   - `.env.user.example` → rename to `.env`
+   - `start-knowflow.bat` (Windows) or `start-knowflow.sh` (Mac/Linux)
+
+2. **Edit `.env`** with user's name and network path:
+   ```bash
+   KNOWFLOW_USER=alice
+
+   # Windows (UNC path)
+   ADMIN_SHARE_PATH=//SERVER/KnowFlow/admin
+
+   # Mac (SMB mount)
+   ADMIN_SHARE_PATH=/Volumes/KnowFlow/admin
+
+   # Linux
+   ADMIN_SHARE_PATH=/mnt/shared/knowflow/admin
+   ```
+
+3. **Launch:**
+   - **Windows**: Double-click `start-knowflow.bat`
+   - **Mac/Linux**: Run `./start-knowflow.sh`
+
+Users open http://localhost:5173 and see the shared templates.
+
+### Permissions
+
+| User | Process Templates | Projects |
+|------|------------------|----------|
+| `admin` | Read + Write | Read + Write |
+| Others | Read-only | Read + Write (local) |
+
+### How It Works
+
+- Admin's templates live on the network share
+- Users mount that share read-only via `ADMIN_DATA_DIR`
+- User projects are stored locally (fast writes, no network latency)
+- SQLite ATTACH connects user's DB to admin's templates
+- `/api/whoami` shows current user and permissions
 
 ### Resetting the Database
 

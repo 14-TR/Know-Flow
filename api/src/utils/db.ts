@@ -7,17 +7,61 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DATA_DIR = process.env.DATA_DIR || './data';
-const DB_PATH = path.join(DATA_DIR, 'knowflow.db');
+// Multi-user folder structure:
+//
+// Option A: Everything on shared drive
+//   DATA_DIR=/shared/knowflow KNOWFLOW_USER=alice
+//   /shared/knowflow/admin/knowflow.db   <- templates
+//   /shared/knowflow/alice/knowflow.db   <- alice's projects
+//
+// Option B: Admin on network, users local (recommended for Windows)
+//   DATA_DIR=./data ADMIN_DATA_DIR=//SERVER/KnowFlow/admin KNOWFLOW_USER=alice
+//   //SERVER/KnowFlow/admin/knowflow.db  <- templates (read-only)
+//   ./data/knowflow.db                   <- alice's local projects
 
-// Ensure data directory exists
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+const DATA_DIR = process.env.DATA_DIR || './data';
+const KNOWFLOW_USER = process.env.KNOWFLOW_USER || 'admin';
+const IS_ADMIN = KNOWFLOW_USER.toLowerCase() === 'admin';
+
+// User's data folder - local storage for projects
+const USER_DATA_DIR = IS_ADMIN ? path.join(DATA_DIR, 'admin') : DATA_DIR;
+const DB_PATH = path.join(USER_DATA_DIR, 'knowflow.db');
+
+// Admin's data folder - can be separate (network share) or same as DATA_DIR
+// If ADMIN_DATA_DIR is set, use it; otherwise assume admin is at DATA_DIR/admin
+const ADMIN_DATA_DIR = process.env.ADMIN_DATA_DIR || path.join(DATA_DIR, 'admin');
+const ADMIN_DB_PATH = path.join(ADMIN_DATA_DIR, 'knowflow.db');
+
+// Ensure data directories exist
+if (!fs.existsSync(USER_DATA_DIR)) {
+  fs.mkdirSync(USER_DATA_DIR, { recursive: true });
 }
 
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
+
+// If user (not admin), attach admin DB for reading process templates
+if (!IS_ADMIN && fs.existsSync(ADMIN_DB_PATH)) {
+  db.exec(`ATTACH DATABASE '${ADMIN_DB_PATH}' AS admin`);
+  console.log(`Attached admin database from ${ADMIN_DB_PATH}`);
+
+  // Create views pointing to admin tables so existing queries work unchanged
+  // These views are read-only - users can't modify process templates
+  db.exec(`
+    CREATE VIEW IF NOT EXISTS processes AS SELECT * FROM admin.processes;
+    CREATE VIEW IF NOT EXISTS nodes AS SELECT * FROM admin.nodes;
+    CREATE VIEW IF NOT EXISTS edges AS SELECT * FROM admin.edges;
+  `);
+  console.log('Created read-only views for process templates');
+} else if (!IS_ADMIN) {
+  console.warn(`Warning: Admin database not found at ${ADMIN_DB_PATH}`);
+  console.warn('User will not have access to process templates until admin creates them.');
+}
+
+// Export for use in routes
+export const isAdmin = IS_ADMIN;
+export const knowflowUser = KNOWFLOW_USER;
 
 // Register uuid function for SQLite
 db.function('uuid_generate_v4', () => uuidv4());
@@ -173,28 +217,100 @@ const runMigrations = () => {
 
 // Initialize database schema
 export const initDatabase = () => {
-  const schemaPath = path.join(__dirname, '../../database/schema.sql');
-  console.log('Looking for schema at:', schemaPath);
-  if (fs.existsSync(schemaPath)) {
-    const schema = fs.readFileSync(schemaPath, 'utf-8');
-    db.exec(schema);
-    console.log('Database schema initialized');
+  console.log(`Initializing database for user: ${KNOWFLOW_USER} (admin: ${IS_ADMIN})`);
 
-    // Run migrations for existing databases
-    runMigrations();
+  if (IS_ADMIN) {
+    // Admin: full schema with all tables
+    const schemaPath = path.join(__dirname, '../../database/schema.sql');
+    console.log('Looking for schema at:', schemaPath);
+    if (fs.existsSync(schemaPath)) {
+      const schema = fs.readFileSync(schemaPath, 'utf-8');
+      db.exec(schema);
+      console.log('Admin database schema initialized');
 
-    // Seed data if database is empty
-    const processCount = db.prepare('SELECT COUNT(*) as count FROM processes').get() as { count: number };
-    if (processCount.count === 0) {
-      const seedPath = path.join(__dirname, '../../database/seed.sqlite.sql');
-      if (fs.existsSync(seedPath)) {
-        const seed = fs.readFileSync(seedPath, 'utf-8');
-        db.exec(seed);
-        console.log('Database seeded with sample data');
+      // Run migrations for existing databases
+      runMigrations();
+
+      // Seed data if database is empty
+      const processCount = db.prepare('SELECT COUNT(*) as count FROM processes').get() as { count: number };
+      if (processCount.count === 0) {
+        const seedPath = path.join(__dirname, '../../database/seed.sqlite.sql');
+        if (fs.existsSync(seedPath)) {
+          const seed = fs.readFileSync(seedPath, 'utf-8');
+          db.exec(seed);
+          console.log('Database seeded with sample data');
+        }
       }
+    } else {
+      console.warn('Schema file not found at:', schemaPath);
     }
   } else {
-    console.warn('Schema file not found at:', schemaPath);
+    // User: only project-related tables (processes/nodes/edges come from admin views)
+    const userSchemaPath = path.join(__dirname, '../../database/schema.user.sql');
+    if (fs.existsSync(userSchemaPath)) {
+      const schema = fs.readFileSync(userSchemaPath, 'utf-8');
+      db.exec(schema);
+      console.log('User database schema initialized');
+    } else {
+      console.warn('User schema file not found at:', userSchemaPath);
+      console.warn('Creating minimal user schema inline...');
+      // Fallback: create user tables inline
+      db.exec(`
+        -- Projects table: instances of a process for tracking
+        CREATE TABLE IF NOT EXISTS projects (
+            id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(hex(randomblob(2)),2) || '-' || hex(randomblob(6)))),
+            name TEXT NOT NULL,
+            process_id TEXT NOT NULL,
+            status TEXT DEFAULT 'active' CHECK (status IN ('active', 'completed', 'archived')),
+            metadata TEXT DEFAULT '{}',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
+        -- Project Node Statuses
+        CREATE TABLE IF NOT EXISTS project_node_statuses (
+            id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(hex(randomblob(2)),2) || '-' || hex(randomblob(6)))),
+            project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            node_id TEXT NOT NULL,
+            status TEXT DEFAULT 'not_started' CHECK (status IN ('not_started', 'in_progress', 'complete', 'skipped')),
+            decision_result TEXT,
+            form_data TEXT DEFAULT '{}',
+            assigned_to TEXT,
+            notes TEXT,
+            started_at DATETIME,
+            completed_at DATETIME,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(project_id, node_id)
+        );
+
+        -- Project Edge Traversals
+        CREATE TABLE IF NOT EXISTS project_edge_traversals (
+            id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(hex(randomblob(2)),2) || '-' || hex(randomblob(6)))),
+            project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            edge_id TEXT NOT NULL,
+            executed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
+        -- Indexes
+        CREATE INDEX IF NOT EXISTS idx_projects_process_id ON projects(process_id);
+        CREATE INDEX IF NOT EXISTS idx_project_node_statuses_project ON project_node_statuses(project_id);
+        CREATE INDEX IF NOT EXISTS idx_project_node_statuses_node ON project_node_statuses(node_id);
+        CREATE INDEX IF NOT EXISTS idx_project_edge_traversals_project ON project_edge_traversals(project_id);
+
+        -- Trigger for updated_at
+        CREATE TRIGGER IF NOT EXISTS update_projects_updated_at AFTER UPDATE ON projects
+        BEGIN
+            UPDATE projects SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS update_project_node_statuses_updated_at AFTER UPDATE ON project_node_statuses
+        BEGIN
+            UPDATE project_node_statuses SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+        END;
+      `);
+      console.log('User schema created inline');
+    }
   }
 };
 

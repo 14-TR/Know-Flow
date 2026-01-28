@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0] - 2025-01-28
+
+### Added
+
+#### Multi-User Team Deployment
+- `KNOWFLOW_USER` environment variable for per-user database folders
+- Admin/user role separation with automatic permission handling
+- SQLite ATTACH for shared read-only access to admin's process templates
+- `/api/whoami` endpoint to check current user and permissions
+- `adminOnly` middleware to protect template routes
+- Separate `schema.user.sql` for user-specific tables
+- Documentation for team deployment with shared network drives
+
+#### README Improvements
+- Expanded QuickStart guide with Docker and local development options
+- Added installation verification steps
+- Added "First Steps" tutorial section
+- Added environment variables reference
+- Added team deployment documentation
+
+---
+
 ## [1.1.0] - 2025-01-25
 
 ### Added
@@ -135,6 +157,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 1.2.0 | 2025-01-28 | Multi-user team deployment, shared templates |
 | 1.1.0 | 2025-01-25 | Bug fixes, documentation, license |
 | 1.0.1 | 2025-01-25 | Graph RAG API, MCP Server, Graph Explorer UI |
 | 1.0.0 | 2025-01-24 | Editable edges, SQLite migration |

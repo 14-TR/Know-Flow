@@ -7,7 +7,8 @@ import { projectRoutes } from './routes/projects.js';
 import { projectNodeStatusRoutes } from './routes/projectNodeStatuses.js';
 import { debugRoutes } from './routes/debug.js';
 import { graphRagRoutes } from './routes/graphRag.js';
-import { initDatabase } from './utils/db.js';
+import { initDatabase, isAdmin, knowflowUser } from './utils/db.js';
+import { adminOnly } from './middleware/adminOnly.js';
 
 // Initialize database schema
 initDatabase();
@@ -23,10 +24,17 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Routes
-app.use('/api/processes', processRoutes);
-app.use('/api/nodes', nodeRoutes);
-app.use('/api/edges', edgeRoutes);
+// User info endpoint
+app.get('/api/whoami', (req, res) => {
+  res.json({ user: knowflowUser, isAdmin });
+});
+
+// Routes - Template routes (admin-only for writes, everyone can read)
+app.use('/api/processes', adminOnly, processRoutes);
+app.use('/api/nodes', adminOnly, nodeRoutes);
+app.use('/api/edges', adminOnly, edgeRoutes);
+
+// Routes - User routes (everyone can read/write their own projects)
 app.use('/api/projects', projectRoutes);
 app.use('/api/project-node-statuses', projectNodeStatusRoutes);
 app.use('/api/debug', debugRoutes);
@@ -40,4 +48,5 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
 
 app.listen(PORT, () => {
   console.log(`Know-Flow API running on port ${PORT}`);
+  console.log(`User: ${knowflowUser} (${isAdmin ? 'admin' : 'read-only templates'})`);
 });
