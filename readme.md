@@ -254,9 +254,56 @@ npm run start    # Run compiled server
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | 3001 | Backend API port |
-| `DATA_DIR` | `./data` | Directory for SQLite database |
+| `DATA_DIR` | `./data` | Root directory for SQLite databases |
+| `KNOWFLOW_USER` | `admin` | User folder name (enables multi-user mode) |
 | `NODE_ENV` | development | Environment mode |
 | `VITE_API_URL` | `http://localhost:3001/api` | API URL for frontend |
+
+## Team Deployment (Shared Network Drive)
+
+Share Know-Flow across your organization using a network drive. Admin creates process templates, users create their own projects from those templates.
+
+### Folder Structure
+
+```
+/shared/network/knowflow/
+├── admin/
+│   └── knowflow.db      # Process templates (shared, read-only for users)
+├── alice/
+│   └── knowflow.db      # Alice's projects
+├── bob/
+│   └── knowflow.db      # Bob's projects
+└── ...
+```
+
+### Setup
+
+**1. Admin creates templates:**
+```bash
+DATA_DIR=/mnt/shared/knowflow KNOWFLOW_USER=admin npm run dev
+# or with Docker:
+DATA_DIR=/mnt/shared/knowflow KNOWFLOW_USER=admin docker-compose up
+```
+
+**2. Users run their own instances:**
+```bash
+DATA_DIR=/mnt/shared/knowflow KNOWFLOW_USER=alice npm run dev
+DATA_DIR=/mnt/shared/knowflow KNOWFLOW_USER=bob npm run dev
+```
+
+### Permissions
+
+| User | Process Templates | Projects |
+|------|------------------|----------|
+| `admin` | Read + Write | Read + Write |
+| Others | Read-only | Read + Write (own DB) |
+
+### How It Works
+
+- Users automatically see admin's process templates via SQLite ATTACH
+- Each user's projects are stored in their own database file
+- The `/api/whoami` endpoint shows current user and permissions
+- Non-admin users get a 403 error if they try to modify templates
 
 ### Resetting the Database
 
