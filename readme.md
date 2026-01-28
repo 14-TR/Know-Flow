@@ -267,16 +267,19 @@ Share Know-Flow across your organization. Admin creates process templates on a n
 ### Architecture
 
 ```
-Network Share (\\SERVER\KnowFlow\)
+Network Share
 └── admin/
-    └── knowflow.db          # Shared templates (read-only for users)
+    └── knowflow.db              # Shared templates (read-only for users)
 
-Alice's PC (C:\Users\Alice\KnowFlow\)
-└── knowflow.db              # Alice's local projects
-
-Bob's PC (C:\Users\Bob\KnowFlow\)
-└── knowflow.db              # Bob's local projects
+User's Local Machine
+└── data/
+    └── knowflow.db              # User's local projects
 ```
+
+Network share paths by OS:
+- **Windows**: `\\SERVER\KnowFlow\admin` or `Z:\KnowFlow\admin`
+- **Mac**: `/Volumes/KnowFlow/admin`
+- **Linux**: `/mnt/shared/knowflow/admin`
 
 ### Admin Setup
 
@@ -294,22 +297,32 @@ docker-compose up --build
 DATA_DIR=/mnt/shared/knowflow KNOWFLOW_USER=admin docker-compose up --build
 ```
 
-### User Setup (Windows)
+### User Setup
 
 Users just need Docker Desktop installed. IT can distribute these files:
 
 1. **Copy to user's machine:**
    - `docker-compose.user.yml`
    - `.env.user.example` → rename to `.env`
-   - `start-knowflow.bat`
+   - `start-knowflow.bat` (Windows) or `start-knowflow.sh` (Mac/Linux)
 
 2. **Edit `.env`** with user's name and network path:
-   ```
+   ```bash
    KNOWFLOW_USER=alice
+
+   # Windows (UNC path)
    ADMIN_SHARE_PATH=//SERVER/KnowFlow/admin
+
+   # Mac (SMB mount)
+   ADMIN_SHARE_PATH=/Volumes/KnowFlow/admin
+
+   # Linux
+   ADMIN_SHARE_PATH=/mnt/shared/knowflow/admin
    ```
 
-3. **Double-click `start-knowflow.bat`** to launch
+3. **Launch:**
+   - **Windows**: Double-click `start-knowflow.bat`
+   - **Mac/Linux**: Run `./start-knowflow.sh`
 
 Users open http://localhost:5173 and see the shared templates.
 
