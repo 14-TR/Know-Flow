@@ -37,29 +37,87 @@ An interactive, editable context graph (decision flow chart) for tracking proces
 
 ## Quick Start
 
+### Option 1: Docker (Recommended)
+
+The fastest way to get started. Requires only Docker and Docker Compose.
+
+```bash
+# Clone the repository
+git clone https://github.com/14-TR/Know-Flow.git
+cd Know-Flow
+
+# Start all services
+docker-compose up --build
+
+# Open in browser
+# Frontend: http://localhost:5173
+# API: http://localhost:3001/api
+```
+
+That's it! The database is automatically created and seeded with sample data.
+
+### Option 2: Local Development
+
+For development without Docker. Requires Node.js 18+ and npm.
+
+**1. Start the Backend**
+```bash
+cd api
+npm install
+npm run dev
+# API running at http://localhost:3001
+```
+
+**2. Start the Frontend** (in a new terminal)
+```bash
+cd client
+npm install
+npm run dev
+# Frontend running at http://localhost:5173
+```
+
+### Verify Installation
+
+Once running, you should be able to:
+
+1. **View the Process List**: Open http://localhost:5173 - you'll see the sample "Property Development Process"
+2. **Open the Graph Editor**: Click on the process to view and edit the interactive flowchart
+3. **Explore the Graph RAG UI**: Navigate to http://localhost:5173/explorer to search and explore nodes
+4. **Check the API**: Visit http://localhost:3001/api/processes to see the JSON response
+5. **Inspect the Database**: Go to http://localhost:5173/database to view all tables
+
+### First Steps
+
+After installation, try these to get familiar with Know-Flow:
+
+1. **Edit a Process**: Click on "Property Development Process", then drag nodes around or double-click to edit
+2. **Create a Project**: Use the "New Project" button to create a tracking instance from the process template
+3. **Track Progress**: In a project, click nodes to update their status (Not Started → In Progress → Complete)
+4. **Search with Graph RAG**: Go to `/explorer` and search for "approval" to find related nodes
+5. **Export a Graph**: In the Graph Explorer, export your process as Markdown or Mermaid diagrams
+
 ### Prerequisites
 
-- Docker and Docker Compose installed
+| Requirement | Docker Setup | Local Setup |
+|-------------|--------------|-------------|
+| Docker | Required | Not needed |
+| Docker Compose | Required | Not needed |
+| Node.js | Not needed | 18+ required |
+| npm | Not needed | Required |
 
-### Running the Application
+### Ports Used
 
-1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   cd Know-Flow
-   ```
+| Service | Port | URL |
+|---------|------|-----|
+| Frontend | 5173 | http://localhost:5173 |
+| Backend API | 3001 | http://localhost:3001/api |
 
-2. Start all services with Docker Compose:
-   ```bash
-   docker-compose up --build
-   ```
+### Data Persistence
 
-3. Access the application:
-   - **Frontend**: http://localhost:5173
-   - **API**: http://localhost:3001/api
-   - **Database Viewer**: http://localhost:5173/database
+- **Docker**: Data is stored in a Docker volume (`api_data`)
+- **Local**: Database is created at `api/data/knowflow.db`
 
-The SQLite database is automatically created and seeded with sample data on first run. Data is persisted in the `api/data/` directory.
+The SQLite database is automatically initialized with schema and sample data on first run.
 
 ## Project Structure
 
@@ -166,23 +224,53 @@ Know-Flow/
 
 ## Development
 
-### Running Without Docker
+### Available Scripts
 
-**Backend:**
+**Backend (api/)**
 ```bash
-cd api
-npm install
-npm run dev
+npm run dev      # Start development server with hot reload
+npm run build    # Compile TypeScript to dist/
+npm run start    # Run compiled production build
+npm run typecheck # Run TypeScript type checking
 ```
 
-**Frontend:**
+**Frontend (client/)**
 ```bash
-cd client
-npm install
-npm run dev
+npm run dev      # Start Vite dev server with HMR
+npm run build    # Build for production
+npm run preview  # Preview production build
+npm run typecheck # Run TypeScript type checking
 ```
 
-The SQLite database will be automatically created in `api/data/knowflow.db` when the API starts.
+**MCP Server (mcp-server/)**
+```bash
+npm run dev      # Run with tsx for development
+npm run build    # Compile TypeScript
+npm run start    # Run compiled server
+```
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | 3001 | Backend API port |
+| `DATA_DIR` | `./data` | Directory for SQLite database |
+| `NODE_ENV` | development | Environment mode |
+| `VITE_API_URL` | `http://localhost:3001/api` | API URL for frontend |
+
+### Resetting the Database
+
+To reset the database to initial seed data:
+
+```bash
+# Docker
+docker-compose down -v
+docker-compose up --build
+
+# Local
+rm api/data/knowflow.db
+npm run dev  # in api/
+```
 
 ## Sample Data
 
