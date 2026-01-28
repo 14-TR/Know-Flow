@@ -254,56 +254,79 @@ npm run start    # Run compiled server
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | 3001 | Backend API port |
-| `DATA_DIR` | `./data` | Root directory for SQLite databases |
-| `KNOWFLOW_USER` | `admin` | User folder name (enables multi-user mode) |
+| `DATA_DIR` | `./data` | Local directory for user's projects |
+| `ADMIN_DATA_DIR` | `DATA_DIR/admin` | Path to admin templates (can be network share) |
+| `KNOWFLOW_USER` | `admin` | Username (use `admin` for template editing) |
 | `NODE_ENV` | development | Environment mode |
 | `VITE_API_URL` | `http://localhost:3001/api` | API URL for frontend |
 
 ## Team Deployment (Shared Network Drive)
 
-Share Know-Flow across your organization using a network drive. Admin creates process templates, users create their own projects from those templates.
+Share Know-Flow across your organization. Admin creates process templates on a network share, users run locally and access those templates read-only.
 
-### Folder Structure
+### Architecture
 
 ```
-/shared/network/knowflow/
-├── admin/
-│   └── knowflow.db      # Process templates (shared, read-only for users)
-├── alice/
-│   └── knowflow.db      # Alice's projects
-├── bob/
-│   └── knowflow.db      # Bob's projects
-└── ...
+Network Share (\\SERVER\KnowFlow\)
+└── admin/
+    └── knowflow.db          # Shared templates (read-only for users)
+
+Alice's PC (C:\Users\Alice\KnowFlow\)
+└── knowflow.db              # Alice's local projects
+
+Bob's PC (C:\Users\Bob\KnowFlow\)
+└── knowflow.db              # Bob's local projects
 ```
 
-### Setup
+### Admin Setup
 
-**1. Admin creates templates:**
+Admin runs Know-Flow pointed at the network share:
+
+```cmd
+:: Windows
+set DATA_DIR=Z:\KnowFlow
+set KNOWFLOW_USER=admin
+docker-compose up --build
+```
+
 ```bash
-DATA_DIR=/mnt/shared/knowflow KNOWFLOW_USER=admin npm run dev
-# or with Docker:
-DATA_DIR=/mnt/shared/knowflow KNOWFLOW_USER=admin docker-compose up
+# Linux/Mac
+DATA_DIR=/mnt/shared/knowflow KNOWFLOW_USER=admin docker-compose up --build
 ```
 
-**2. Users run their own instances:**
-```bash
-DATA_DIR=/mnt/shared/knowflow KNOWFLOW_USER=alice npm run dev
-DATA_DIR=/mnt/shared/knowflow KNOWFLOW_USER=bob npm run dev
-```
+### User Setup (Windows)
+
+Users just need Docker Desktop installed. IT can distribute these files:
+
+1. **Copy to user's machine:**
+   - `docker-compose.user.yml`
+   - `.env.user.example` → rename to `.env`
+   - `start-knowflow.bat`
+
+2. **Edit `.env`** with user's name and network path:
+   ```
+   KNOWFLOW_USER=alice
+   ADMIN_SHARE_PATH=//SERVER/KnowFlow/admin
+   ```
+
+3. **Double-click `start-knowflow.bat`** to launch
+
+Users open http://localhost:5173 and see the shared templates.
 
 ### Permissions
 
 | User | Process Templates | Projects |
 |------|------------------|----------|
 | `admin` | Read + Write | Read + Write |
-| Others | Read-only | Read + Write (own DB) |
+| Others | Read-only | Read + Write (local) |
 
 ### How It Works
 
-- Users automatically see admin's process templates via SQLite ATTACH
-- Each user's projects are stored in their own database file
-- The `/api/whoami` endpoint shows current user and permissions
-- Non-admin users get a 403 error if they try to modify templates
+- Admin's templates live on the network share
+- Users mount that share read-only via `ADMIN_DATA_DIR`
+- User projects are stored locally (fast writes, no network latency)
+- SQLite ATTACH connects user's DB to admin's templates
+- `/api/whoami` shows current user and permissions
 
 ### Resetting the Database
 

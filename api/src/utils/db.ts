@@ -8,25 +8,28 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Multi-user folder structure:
-// /shared/knowflow/
-//   admin/knowflow.db     <- process templates (shared)
-//   alice/knowflow.db     <- alice's projects
-//   bob/knowflow.db       <- bob's projects
 //
-// Usage:
-//   Admin:  DATA_DIR=/shared/knowflow KNOWFLOW_USER=admin
-//   Users:  DATA_DIR=/shared/knowflow KNOWFLOW_USER=alice
+// Option A: Everything on shared drive
+//   DATA_DIR=/shared/knowflow KNOWFLOW_USER=alice
+//   /shared/knowflow/admin/knowflow.db   <- templates
+//   /shared/knowflow/alice/knowflow.db   <- alice's projects
+//
+// Option B: Admin on network, users local (recommended for Windows)
+//   DATA_DIR=./data ADMIN_DATA_DIR=//SERVER/KnowFlow/admin KNOWFLOW_USER=alice
+//   //SERVER/KnowFlow/admin/knowflow.db  <- templates (read-only)
+//   ./data/knowflow.db                   <- alice's local projects
 
 const DATA_DIR = process.env.DATA_DIR || './data';
 const KNOWFLOW_USER = process.env.KNOWFLOW_USER || 'admin';
 const IS_ADMIN = KNOWFLOW_USER.toLowerCase() === 'admin';
 
-// User's data folder
-const USER_DATA_DIR = path.join(DATA_DIR, KNOWFLOW_USER);
+// User's data folder - local storage for projects
+const USER_DATA_DIR = IS_ADMIN ? path.join(DATA_DIR, 'admin') : DATA_DIR;
 const DB_PATH = path.join(USER_DATA_DIR, 'knowflow.db');
 
-// Admin's data folder (for ATTACH)
-const ADMIN_DATA_DIR = path.join(DATA_DIR, 'admin');
+// Admin's data folder - can be separate (network share) or same as DATA_DIR
+// If ADMIN_DATA_DIR is set, use it; otherwise assume admin is at DATA_DIR/admin
+const ADMIN_DATA_DIR = process.env.ADMIN_DATA_DIR || path.join(DATA_DIR, 'admin');
 const ADMIN_DB_PATH = path.join(ADMIN_DATA_DIR, 'knowflow.db');
 
 // Ensure data directories exist
