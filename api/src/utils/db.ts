@@ -46,12 +46,13 @@ if (!IS_ADMIN && fs.existsSync(ADMIN_DB_PATH)) {
   db.exec(`ATTACH DATABASE '${ADMIN_DB_PATH}' AS admin`);
   console.log(`Attached admin database from ${ADMIN_DB_PATH}`);
 
-  // Create views pointing to admin tables so existing queries work unchanged
+  // Create TEMP views pointing to admin tables so existing queries work unchanged
+  // Temp views can reference attached databases; regular views cannot
   // These views are read-only - users can't modify process templates
   db.exec(`
-    CREATE VIEW IF NOT EXISTS processes AS SELECT * FROM admin.processes;
-    CREATE VIEW IF NOT EXISTS nodes AS SELECT * FROM admin.nodes;
-    CREATE VIEW IF NOT EXISTS edges AS SELECT * FROM admin.edges;
+    CREATE TEMP VIEW IF NOT EXISTS processes AS SELECT * FROM admin.processes;
+    CREATE TEMP VIEW IF NOT EXISTS nodes AS SELECT * FROM admin.nodes;
+    CREATE TEMP VIEW IF NOT EXISTS edges AS SELECT * FROM admin.edges;
   `);
   console.log('Created read-only views for process templates');
 } else if (!IS_ADMIN) {

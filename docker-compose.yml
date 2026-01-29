@@ -8,15 +8,18 @@ services:
     container_name: knowflow-api
     environment:
       NODE_ENV: development
-      DATA_DIR: /app/data
       PORT: 3001
+      DATA_DIR: /app/data
+      ADMIN_DATA_DIR: /app/admin-templates
+      KNOWFLOW_USER: ${KNOWFLOW_USER:-admin}
     ports:
       - "3001:3001"
     volumes:
       - ./api:/app
       - /app/node_modules
       - ./database:/app/database
-      - api_data:/app/data
+      - ${DATA_DIR:-./data}:/app/data
+      - ${ADMIN_DATA_DIR:-./data/admin}:/app/admin-templates:ro
 
   client:
     build:
@@ -32,6 +35,3 @@ services:
     volumes:
       - ./client:/app
       - /app/node_modules
-
-volumes:
-  api_data:
