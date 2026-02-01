@@ -64,6 +64,19 @@ if (!IS_ADMIN && fs.existsSync(ADMIN_DB_PATH)) {
 export const isAdmin = IS_ADMIN;
 export const knowflowUser = KNOWFLOW_USER;
 
+// Direct query helpers for synchronous SQLite access (used by graphRag routes)
+export function all<T = unknown>(sql: string, params: unknown[] = []): T[] {
+  const stmt = db.prepare(sql);
+  return stmt.all(...params) as T[];
+}
+
+export function get<T = unknown>(sql: string, params: unknown[] = []): T | undefined {
+  const stmt = db.prepare(sql);
+  return stmt.get(...params) as T | undefined;
+}
+
+export { db };
+
 // Register uuid function for SQLite
 db.function('uuid_generate_v4', () => uuidv4());
 
