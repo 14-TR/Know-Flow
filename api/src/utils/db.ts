@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { fileURLToPath } from 'url';
+import { convertParams, convertNow, parseReturning } from './helpers.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -79,38 +80,6 @@ export { db };
 
 // Register uuid function for SQLite
 db.function('uuid_generate_v4', () => uuidv4());
-
-// Convert PostgreSQL-style $1, $2 params to SQLite ? params
-function convertParams(sql: string): string {
-  return sql.replace(/\$(\d+)/g, '?');
-}
-
-// Handle RETURNING clause by extracting it and doing a separate select
-function parseReturning(sql: string): { sql: string; hasReturning: boolean; table: string | null } {
-  const returningMatch = sql.match(/\s+RETURNING\s+\*\s*$/i);
-  if (!returningMatch) {
-    return { sql, hasReturning: false, table: null };
-  }
-
-  const sqlWithoutReturning = sql.replace(/\s+RETURNING\s+\*\s*$/i, '');
-
-  // Extract table name from INSERT or UPDATE
-  let table: string | null = null;
-  const insertMatch = sqlWithoutReturning.match(/INSERT\s+INTO\s+(\w+)/i);
-  const updateMatch = sqlWithoutReturning.match(/UPDATE\s+(\w+)/i);
-  const deleteMatch = sqlWithoutReturning.match(/DELETE\s+FROM\s+(\w+)/i);
-
-  if (insertMatch) table = insertMatch[1];
-  else if (updateMatch) table = updateMatch[1];
-  else if (deleteMatch) table = deleteMatch[1];
-
-  return { sql: sqlWithoutReturning, hasReturning: true, table };
-}
-
-// Convert NOW() to datetime('now')
-function convertNow(sql: string): string {
-  return sql.replace(/NOW\(\)/gi, "datetime('now')");
-}
 
 // Query result interface matching pg
 interface QueryResult {

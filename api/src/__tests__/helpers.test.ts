@@ -1,36 +1,16 @@
 /**
  * Tests for helper functions used across routes.
  *
- * These tests cover JSON parsing utilities and other common helpers
+ * These tests cover JSON parsing utilities and SQL conversion helpers
  * that don't require database connections.
  */
 import { describe, it, expect } from 'vitest';
-
-/**
- * Helper to parse JSON fields that SQLite returns as strings.
- * Extracted from routes for testing.
- */
-function parseJsonFields(
-  row: Record<string, unknown>,
-  fields: string[]
-): Record<string, unknown> {
-  if (!row) return row;
-  const parsed = { ...row };
-  for (const field of fields) {
-    if (typeof parsed[field] === 'string') {
-      try {
-        parsed[field] = JSON.parse(parsed[field] as string);
-      } catch {
-        parsed[field] = field === 'waypoints' ? [] : {};
-      }
-    }
-    // Ensure waypoints is always an array
-    if (field === 'waypoints' && !Array.isArray(parsed[field])) {
-      parsed[field] = [];
-    }
-  }
-  return parsed;
-}
+import {
+  parseJsonFields,
+  convertParams,
+  convertNow,
+  parseReturning,
+} from '../utils/helpers.js';
 
 describe('parseJsonFields', () => {
   it('should return null/undefined row unchanged', () => {
@@ -144,15 +124,7 @@ describe('parseJsonFields', () => {
   });
 });
 
-/**
- * Tests for SQL parameter conversion (PostgreSQL $1 to SQLite ?).
- * This tests the pattern used in db.ts.
- */
-describe('SQL Parameter Conversion', () => {
-  function convertParams(sql: string): string {
-    return sql.replace(/\$(\d+)/g, '?');
-  }
-
+describe('convertParams', () => {
   it('should convert single parameter', () => {
     const sql = 'SELECT * FROM users WHERE id = $1';
     expect(convertParams(sql)).toBe('SELECT * FROM users WHERE id = ?');
@@ -173,44 +145,33 @@ describe('SQL Parameter Conversion', () => {
     expect(convertParams(sql)).toBe('SELECT * FROM users');
   });
 
-  it('should convert NOW() function', () => {
-    function convertNow(sql: string): string {
-      return sql.replace(/NOW\(\)/gi, "datetime('now')");
-    }
-
-    expect(convertNow('SELECT NOW()')).toBe("SELECT datetime('now')");
-    expect(convertNow('SELECT now()')).toBe("SELECT datetime('now')");
+  it('should handle double-digit parameters', () => {
+    const sql = 'SELECT * FROM t WHERE a = $1 AND b = $10 AND c = $11';
+    expect(convertParams(sql)).toBe('SELECT * FROM t WHERE a = ? AND b = ? AND c = ?');
   });
 });
 
-/**
- * Tests for RETURNING clause detection.
- */
-describe('RETURNING Clause Parsing', () => {
-  function parseReturning(sql: string): {
-    sql: string;
-    hasReturning: boolean;
-    table: string | null;
-  } {
-    const returningMatch = sql.match(/\s+RETURNING\s+\*\s*$/i);
-    if (!returningMatch) {
-      return { sql, hasReturning: false, table: null };
-    }
+describe('convertNow', () => {
+  it('should convert NOW() function', () => {
+    expect(convertNow('SELECT NOW()')).toBe("SELECT datetime('now')");
+  });
 
-    const sqlWithoutReturning = sql.replace(/\s+RETURNING\s+\*\s*$/i, '');
+  it('should convert lowercase now()', () => {
+    expect(convertNow('SELECT now()')).toBe("SELECT datetime('now')");
+  });
 
-    let table: string | null = null;
-    const insertMatch = sqlWithoutReturning.match(/INSERT\s+INTO\s+(\w+)/i);
-    const updateMatch = sqlWithoutReturning.match(/UPDATE\s+(\w+)/i);
-    const deleteMatch = sqlWithoutReturning.match(/DELETE\s+FROM\s+(\w+)/i);
+  it('should convert multiple NOW() calls', () => {
+    expect(convertNow('INSERT INTO t (a, b) VALUES (NOW(), NOW())'))
+      .toBe("INSERT INTO t (a, b) VALUES (datetime('now'), datetime('now'))");
+  });
 
-    if (insertMatch) table = insertMatch[1];
-    else if (updateMatch) table = updateMatch[1];
-    else if (deleteMatch) table = deleteMatch[1];
+  it('should not modify SQL without NOW()', () => {
+    const sql = 'SELECT * FROM users';
+    expect(convertNow(sql)).toBe(sql);
+  });
+});
 
-    return { sql: sqlWithoutReturning, hasReturning: true, table };
-  }
-
+describe('parseReturning', () => {
   it('should detect INSERT with RETURNING', () => {
     const sql = 'INSERT INTO users (name) VALUES ($1) RETURNING *';
     const result = parseReturning(sql);
@@ -226,6 +187,7 @@ describe('RETURNING Clause Parsing', () => {
 
     expect(result.hasReturning).toBe(true);
     expect(result.table).toBe('users');
+    expect(result.sql).toBe('UPDATE users SET name = $1 WHERE id = $2');
   });
 
   it('should detect DELETE with RETURNING', () => {
@@ -234,6 +196,7 @@ describe('RETURNING Clause Parsing', () => {
 
     expect(result.hasReturning).toBe(true);
     expect(result.table).toBe('users');
+    expect(result.sql).toBe('DELETE FROM users WHERE id = $1');
   });
 
   it('should return unchanged SQL without RETURNING', () => {
@@ -243,5 +206,13 @@ describe('RETURNING Clause Parsing', () => {
     expect(result.hasReturning).toBe(false);
     expect(result.table).toBeNull();
     expect(result.sql).toBe(sql);
+  });
+
+  it('should handle case-insensitive RETURNING', () => {
+    const sql = 'INSERT INTO users (name) VALUES ($1) returning *';
+    const result = parseReturning(sql);
+
+    expect(result.hasReturning).toBe(true);
+    expect(result.table).toBe('users');
   });
 });
