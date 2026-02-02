@@ -1,27 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { query } from '../utils/db.js';
+import { parseJsonFields } from '../utils/helpers.js';
 
 const router = Router();
-
-// Helper to parse JSON fields that SQLite returns as strings
-function parseJsonFields(row: Record<string, unknown>, fields: string[]): Record<string, unknown> {
-  if (!row) return row;
-  const parsed = { ...row };
-  for (const field of fields) {
-    if (typeof parsed[field] === 'string') {
-      try {
-        parsed[field] = JSON.parse(parsed[field] as string);
-      } catch {
-        parsed[field] = field === 'waypoints' ? [] : {};
-      }
-    }
-    // Ensure waypoints is always an array
-    if (field === 'waypoints' && !Array.isArray(parsed[field])) {
-      parsed[field] = [];
-    }
-  }
-  return parsed;
-}
 
 // GET all processes
 router.get('/', async (req: Request, res: Response) => {
