@@ -1,6 +1,29 @@
 import { Router, Request, Response } from 'express';
 import { query, getClient } from '../utils/db.js';
 
+// Interface for project with process info
+interface ProjectWithProcess {
+  id: string;
+  name: string;
+  process_id: string;
+  status: string;
+  metadata: string;
+  created_at: string;
+  updated_at: string;
+  process_name: string;
+}
+
+// Interface for basic project row
+interface ProjectRow {
+  id: string;
+  name: string;
+  process_id: string;
+  status: string;
+  metadata: string;
+  created_at: string;
+  updated_at: string;
+}
+
 const router = Router();
 
 // GET all projects
@@ -60,7 +83,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Project not found' });
     }
 
-    const project = projectResult.rows[0];
+    const project = projectResult.rows[0] as ProjectWithProcess;
 
     // Get nodes with their statuses for this project
     const nodesResult = await query(
@@ -160,7 +183,7 @@ router.post('/', async (req: Request, res: Response) => {
       [name, process_id, JSON.stringify(metadata || {})]
     );
 
-    const project = projectResult.rows[0];
+    const project = projectResult.rows[0] as ProjectRow;
 
     // Initialize node statuses for all nodes in the process
     await client.query(

@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { db, all, get } from '../utils/db.js';
+import { all, get } from '../utils/db.js';
+import type { NodeRow, EdgeRow, ProcessRow, ProjectRow, ProjectNodeStatusRow, ProjectEdgeTraversalRow } from '../types/db.js';
 
 const router = Router();
 
@@ -135,7 +136,7 @@ router.get('/process/:id/context', (req: Request, res: Response) => {
       ...row,
       form_schema: JSON.parse(row.form_schema as string || '{}'),
       metadata: JSON.parse(row.metadata as string || '{}')
-    }));
+    })) as GraphNode[];
 
     // Get all edges
     const edges = all(`
@@ -144,7 +145,7 @@ router.get('/process/:id/context', (req: Request, res: Response) => {
     `, [id]).map((row: Record<string, unknown>) => ({
       ...row,
       condition: JSON.parse(row.condition as string || '{}')
-    }));
+    })) as GraphEdge[];
 
     const context: GraphContext = {
       process: process as GraphContext['process'],
@@ -201,13 +202,13 @@ router.get('/node/:id/neighborhood', (req: Request, res: Response) => {
       if (current.depth >= maxDepth) continue;
 
       // Get outgoing edges
-      const outEdges = all(`
+      const outEdges = all<EdgeRow>(`
         SELECT id, source_node_id, target_node_id, label, condition
         FROM edges WHERE source_node_id = ?
       `, [current.id]);
 
       // Get incoming edges
-      const inEdges = all(`
+      const inEdges = all<EdgeRow>(`
         SELECT id, source_node_id, target_node_id, label, condition
         FROM edges WHERE target_node_id = ?
       `, [current.id]);
@@ -233,7 +234,7 @@ router.get('/node/:id/neighborhood', (req: Request, res: Response) => {
         if (!visited.has(neighborId)) {
           visited.add(neighborId);
 
-          const neighborNode = get(`
+          const neighborNode = get<NodeRow>(`
             SELECT id, type, title, description, form_schema, metadata
             FROM nodes WHERE id = ?
           `, [neighborId]);
@@ -282,22 +283,22 @@ router.get('/node/:id/paths-to/:targetId', (req: Request, res: Response) => {
     const { max_paths = '10', max_length = '20' } = req.query;
 
     // Verify both nodes exist and are in the same process
-    const sourceNode = get('SELECT id, process_id, title FROM nodes WHERE id = ?', [id]);
-    const targetNode = get('SELECT id, process_id, title FROM nodes WHERE id = ?', [targetId]);
+    const sourceNode = get<NodeRow>('SELECT id, process_id, title FROM nodes WHERE id = ?', [id]);
+    const targetNode = get<NodeRow>('SELECT id, process_id, title FROM nodes WHERE id = ?', [targetId]);
 
     if (!sourceNode || !targetNode) {
       return res.status(404).json({ error: 'One or both nodes not found' });
     }
 
-    if ((sourceNode as Record<string, unknown>).process_id !== (targetNode as Record<string, unknown>).process_id) {
+    if (sourceNode.process_id !== targetNode.process_id) {
       return res.status(400).json({ error: 'Nodes must be in the same process' });
     }
 
     // Get all edges for the process
-    const edges = all(`
+    const edges = all<EdgeRow>(`
       SELECT source_node_id, target_node_id, label
       FROM edges WHERE process_id = ?
-    `, [(sourceNode as Record<string, unknown>).process_id]);
+    `, [sourceNode.process_id]);
 
     // Build adjacency list
     const adjacency = new Map<string, Array<{ target: string; label: string | null }>>();
@@ -352,11 +353,11 @@ router.get('/node/:id/paths-to/:targetId', (req: Request, res: Response) => {
     const nodeIds = new Set<string>();
     paths.forEach(p => p.nodes.forEach(n => nodeIds.add(n)));
 
-    const nodesList = all(`
+    const nodesList = all<NodeRow>(`
       SELECT id, title FROM nodes WHERE id IN (${Array.from(nodeIds).map(() => '?').join(',')})
     `, Array.from(nodeIds));
 
-    nodesList.forEach((n: Record<string, unknown>) => nodeMap.set(n.id as string, n.title as string));
+    nodesList.forEach((n) => nodeMap.set(n.id, n.title));
 
     const enrichedPaths = paths.map(p => ({
       ...p,
@@ -365,8 +366,8 @@ router.get('/node/:id/paths-to/:targetId', (req: Request, res: Response) => {
     }));
 
     res.json({
-      source: { id, title: (sourceNode as Record<string, unknown>).title },
-      target: { id: targetId, title: (targetNode as Record<string, unknown>).title },
+      source: { id, title: sourceNode.title },
+      target: { id: targetId, title: targetNode.title },
       paths: enrichedPaths,
       total_paths: paths.length
     });
@@ -393,13 +394,13 @@ router.get('/process/:id/subgraph', (req: Request, res: Response) => {
     const maxDepth = Math.min(parseInt(depth as string) || 10, 20);
 
     // Verify process exists
-    const process = get('SELECT id, name FROM processes WHERE id = ?', [id]);
+    const process = get<ProcessRow>('SELECT id, name FROM processes WHERE id = ?', [id]);
     if (!process) {
       return res.status(404).json({ error: 'Process not found' });
     }
 
     // Get all edges
-    const edges = all('SELECT * FROM edges WHERE process_id = ?', [id]);
+    const edges = all<EdgeRow>('SELECT * FROM edges WHERE process_id = ?', [id]);
 
     // Build adjacency based on direction
     const adjacency = new Map<string, string[]>();
@@ -448,13 +449,13 @@ router.get('/process/:id/subgraph', (req: Request, res: Response) => {
 
     // Get edges within subgraph
     const subgraphEdges = edges.filter(
-      (e: Record<string, unknown>) => visited.has(e.source_node_id as string) && visited.has(e.target_node_id as string)
-    ).map((row: Record<string, unknown>) => ({
+      (e) => visited.has(e.source_node_id) && visited.has(e.target_node_id)
+    ).map((row) => ({
       id: row.id,
       source_node_id: row.source_node_id,
       target_node_id: row.target_node_id,
       label: row.label,
-      condition: JSON.parse(row.condition as string || '{}')
+      condition: JSON.parse(row.condition || '{}')
     }));
 
     res.json({

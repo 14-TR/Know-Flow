@@ -49,7 +49,7 @@ router.get('/:id', async (req: Request, res: Response) => {
     );
 
     res.json({
-      ...processResult.rows[0],
+      ...(processResult.rows[0] as Record<string, unknown>),
       nodes,
       edges,
     });
@@ -111,7 +111,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
       [id]
     );
 
-    if (parseInt(projectsCheck.rows[0].count) > 0) {
+    if (parseInt((projectsCheck.rows[0] as { count: string }).count) > 0) {
       return res.status(400).json({
         error: 'Cannot delete process with existing projects'
       });
