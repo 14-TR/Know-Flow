@@ -215,4 +215,15 @@ describe('parseReturning', () => {
     expect(result.hasReturning).toBe(true);
     expect(result.table).toBe('users');
   });
+
+  it('should return null table when RETURNING present but no recognized SQL verb', () => {
+    // Edge case: RETURNING clause without INSERT/UPDATE/DELETE pattern
+    // (e.g., malformed or unusual SQL that still ends with RETURNING *)
+    const sql = 'SELECT * FROM users RETURNING *';
+    const result = parseReturning(sql);
+
+    expect(result.hasReturning).toBe(true);
+    expect(result.table).toBeNull();
+    expect(result.sql).toBe('SELECT * FROM users');
+  });
 });
