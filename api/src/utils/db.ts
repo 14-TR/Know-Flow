@@ -80,15 +80,7 @@ export function get<T = Record<string, unknown>>(sql: string, params: unknown[] 
 // Register uuid function for SQLite
 db.function('uuid_generate_v4', () => uuidv4());
 
-// Convert PostgreSQL-style $1, $2 params to SQLite ? params
-function convertParams(sql: string): string {
-  return sql.replace(/\$(\d+)/g, '?');
-}
-
 export { db };
-
-// Register uuid function for SQLite
-db.function('uuid_generate_v4', () => uuidv4());
 
 // Query result interface matching pg
 interface QueryResult {
