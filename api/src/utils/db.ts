@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import Database, { Database as DatabaseType } from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
@@ -37,7 +37,7 @@ if (!fs.existsSync(USER_DATA_DIR)) {
   fs.mkdirSync(USER_DATA_DIR, { recursive: true });
 }
 
-const db = new Database(DB_PATH);
+const db: DatabaseType = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
@@ -63,6 +63,18 @@ if (!IS_ADMIN && fs.existsSync(ADMIN_DB_PATH)) {
 // Export for use in routes
 export const isAdmin = IS_ADMIN;
 export const knowflowUser = KNOWFLOW_USER;
+
+// Synchronous query helpers for routes that need direct DB access
+// These are typed generics to avoid 'unknown' leaking into handlers
+export function all<T = Record<string, unknown>>(sql: string, params: unknown[] = []): T[] {
+  const stmt = db.prepare(sql);
+  return stmt.all(...params) as T[];
+}
+
+export function get<T = Record<string, unknown>>(sql: string, params: unknown[] = []): T | undefined {
+  const stmt = db.prepare(sql);
+  return stmt.get(...params) as T | undefined;
+}
 
 // Register uuid function for SQLite
 db.function('uuid_generate_v4', () => uuidv4());
@@ -216,6 +228,53 @@ const runMigrations = () => {
   }
 };
 
+// Load admin templates from admin-templates/ folder
+const loadAdminTemplates = () => {
+  // Create tracking table if it doesn't exist
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS _loaded_templates (
+      filename TEXT PRIMARY KEY,
+      loaded_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  const templatesDir = path.join(__dirname, '../../admin-templates');
+  if (!fs.existsSync(templatesDir)) {
+    console.log('No admin-templates directory found, skipping template loading');
+    return;
+  }
+
+  const sqlFiles = fs.readdirSync(templatesDir)
+    .filter(f => f.endsWith('.sql'))
+    .sort(); // Load in alphabetical order for predictability
+
+  if (sqlFiles.length === 0) {
+    console.log('No SQL files found in admin-templates/');
+    return;
+  }
+
+  console.log(`Found ${sqlFiles.length} template(s) in admin-templates/`);
+
+  for (const filename of sqlFiles) {
+    // Check if already loaded
+    const loaded = db.prepare('SELECT 1 FROM _loaded_templates WHERE filename = ?').get(filename);
+    if (loaded) {
+      console.log(`  Skipping ${filename} (already loaded)`);
+      continue;
+    }
+
+    const filePath = path.join(templatesDir, filename);
+    try {
+      const sql = fs.readFileSync(filePath, 'utf-8');
+      db.exec(sql);
+      db.prepare('INSERT INTO _loaded_templates (filename) VALUES (?)').run(filename);
+      console.log(`  Loaded ${filename}`);
+    } catch (err) {
+      console.error(`  Failed to load ${filename}:`, err);
+    }
+  }
+};
+
 // Initialize database schema
 export const initDatabase = () => {
   console.log(`Initializing database for user: ${KNOWFLOW_USER} (admin: ${IS_ADMIN})`);
@@ -242,6 +301,9 @@ export const initDatabase = () => {
           console.log('Database seeded with sample data');
         }
       }
+
+      // Load any admin templates
+      loadAdminTemplates();
     } else {
       console.warn('Schema file not found at:', schemaPath);
     }

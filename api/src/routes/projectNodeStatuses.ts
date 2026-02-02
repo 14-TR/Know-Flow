@@ -1,6 +1,24 @@
 import { Router, Request, Response } from 'express';
 import { query, getClient } from '../utils/db.js';
 
+// Interface for the joined query result
+interface ProjectNodeStatusWithNode {
+  id: string;
+  project_id: string;
+  node_id: string;
+  status: string;
+  decision_result: string | null;
+  form_data: string;
+  assigned_to: string | null;
+  notes: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  node_type: string;
+  process_id: string;
+}
+
 const router = Router();
 
 // GET all statuses for a project
@@ -80,7 +98,7 @@ router.put('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Status not found' });
     }
 
-    const current = currentResult.rows[0];
+    const current = currentResult.rows[0] as ProjectNodeStatusWithNode;
 
     // Build update query
     let updateFields: string[] = [];
@@ -149,7 +167,7 @@ router.put('/:id', async (req: Request, res: Response) => {
         await client.query(
           `INSERT OR IGNORE INTO project_edge_traversals (project_id, edge_id)
            VALUES ($1, $2)`,
-          [current.project_id, edgeResult.rows[0].id]
+          [current.project_id, (edgeResult.rows[0] as { id: string }).id]
         );
       }
     }

@@ -1,6 +1,7 @@
 {
   "name": "knowflow-api",
   "version": "1.0.0",
+  "type": "module",
   "description": "Know-Flow API - Editable Decision/Process Context Graph",
   "main": "dist/index.js",
   "scripts": {
