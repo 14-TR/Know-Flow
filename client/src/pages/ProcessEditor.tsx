@@ -152,8 +152,8 @@ function ProcessEditorInner() {
   const navigate = useNavigate();
   const { fitView } = useReactFlow();
   const [process, setProcess] = useState<Process | null>(null);
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [selectedNode, setSelectedNode] = useState<ProcessNode | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<ProcessEdge | null>(null);
   const [loading, setLoading] = useState(true);
@@ -339,7 +339,7 @@ function ProcessEditorInner() {
 
   const handleNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
-      setSelectedNode(node.data as ProcessNode);
+      setSelectedNode(node.data as unknown as ProcessNode);
       setSelectedEdge(null);
     },
     []
@@ -347,7 +347,7 @@ function ProcessEditorInner() {
 
   const handleEdgeClick = useCallback(
     (_event: React.MouseEvent, edge: Edge) => {
-      setSelectedEdge(edge.data as ProcessEdge);
+      setSelectedEdge(edge.data as unknown as ProcessEdge);
       setSelectedNode(null);
     },
     []

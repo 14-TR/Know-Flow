@@ -15,7 +15,7 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import { getProject, updateProjectNodeStatus } from '../services/api';
-import type { Project, ProjectNodeWithStatus, ProjectEdgeWithStatus } from '../types';
+import type { Project, ProjectNodeWithStatus, ProjectEdgeWithStatus, ProjectNodeStatus } from '../types';
 import ProjectNode from '../components/ProjectNode';
 import NodeStatusPanel from '../components/NodeStatusPanel';
 
@@ -27,8 +27,8 @@ export default function ProjectTracker() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges] = useEdgesState<Edge>([]);
   const [selectedNode, setSelectedNode] = useState<ProjectNodeWithStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -74,7 +74,7 @@ export default function ProjectTracker() {
 
   const handleNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
-      setSelectedNode(node.data as ProjectNodeWithStatus);
+      setSelectedNode(node.data as unknown as ProjectNodeWithStatus);
     },
     []
   );
@@ -86,7 +86,7 @@ export default function ProjectTracker() {
   const handleUpdateStatus = async (
     statusId: string,
     updates: {
-      status?: string;
+      status?: ProjectNodeStatus['status'];
       decision_result?: string;
       form_data?: Record<string, unknown>;
       notes?: string;

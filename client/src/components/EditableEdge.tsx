@@ -158,7 +158,7 @@ function EditableEdge({
   selected,
   label,
 }: EdgeProps) {
-  const edgeData = data as EditableEdgeData;
+  const edgeData = data as unknown as EditableEdgeData;
   const waypoints: Waypoint[] = parseWaypoints(edgeData?.waypoints);
   const { setEdges, screenToFlowPosition } = useReactFlow();
 
@@ -583,7 +583,7 @@ function EditableEdge({
           edges.map((edge) => {
             if (edge.id !== id) return edge;
 
-            const currentWaypoints = parseWaypoints((edge.data as EditableEdgeData)?.waypoints);
+            const currentWaypoints = parseWaypoints((edge.data as unknown as EditableEdgeData)?.waypoints);
             const baseWaypoints = currentWaypoints.length > 0 ? currentWaypoints : startWaypoints;
             const newWaypoints = [...baseWaypoints];
 
@@ -631,7 +631,7 @@ function EditableEdge({
         setEdges((edges) => {
           const edge = edges.find((e) => e.id === id);
           if (edge && edgeData?.onWaypointsChange) {
-            const finalWaypoints = parseWaypoints((edge.data as EditableEdgeData)?.waypoints);
+            const finalWaypoints = parseWaypoints((edge.data as unknown as EditableEdgeData)?.waypoints);
             edgeData.onWaypointsChange(id, finalWaypoints);
           }
           return edges;
