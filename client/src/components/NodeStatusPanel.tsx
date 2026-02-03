@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import type { ProjectNodeWithStatus, FormField } from '../types';
+import type { ProjectNodeWithStatus, FormField, ProjectNodeStatus } from '../types';
 
 interface Props {
   node: ProjectNodeWithStatus;
   onUpdate: (
     statusId: string,
     data: {
-      status?: string;
+      status?: ProjectNodeStatus['status'];
       decision_result?: string;
       form_data?: Record<string, unknown>;
       notes?: string;

@@ -3,7 +3,7 @@ import { Handle, Position, type NodeProps } from '@xyflow/react';
 import type { ProjectNodeWithStatus } from '../types';
 
 function ProjectNode({ data, selected }: NodeProps) {
-  const nodeData = data as ProjectNodeWithStatus;
+  const nodeData = data as unknown as ProjectNodeWithStatus;
   const status = nodeData.project_status || 'not_started';
 
   const getNodeStyle = () => {
@@ -58,7 +58,7 @@ function ProjectNode({ data, selected }: NodeProps) {
         ...getNodeStyle(),
         boxShadow: selected
           ? '0 0 0 3px rgba(33, 150, 243, 0.5)'
-          : getNodeStyle().boxShadow,
+          : (getNodeStyle().boxShadow as string | undefined),
       }}
     >
       <Handle

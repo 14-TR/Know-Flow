@@ -7,7 +7,6 @@ import {
   getProcessContext,
   findPaths,
   buildContext,
-  type GraphSearchResult,
   type ProcessSummary,
   type NodeNeighborhood,
   type PathResult,

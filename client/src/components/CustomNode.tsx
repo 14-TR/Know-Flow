@@ -3,7 +3,7 @@ import { Handle, Position, type NodeProps } from '@xyflow/react';
 import type { ProcessNode } from '../types';
 
 function CustomNode({ data, selected }: NodeProps) {
-  const nodeData = data as ProcessNode;
+  const nodeData = data as unknown as ProcessNode;
 
   const getNodeStyle = () => {
     switch (nodeData.type) {
