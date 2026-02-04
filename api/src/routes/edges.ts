@@ -1,39 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { query } from '../utils/db.js';
+import { parseJsonFields } from '../utils/helpers.js';
 
 const router = Router();
 
-// Helper to parse JSON fields that SQLite returns as strings
-function parseEdgeJsonFields(edge: Record<string, unknown>): Record<string, unknown> {
-  if (!edge) return edge;
-
-  const parsed = { ...edge };
-
-  // Parse condition if it's a string
-  if (typeof parsed.condition === 'string') {
-    try {
-      parsed.condition = JSON.parse(parsed.condition);
-    } catch {
-      parsed.condition = {};
-    }
-  }
-
-  // Parse waypoints if it's a string
-  if (typeof parsed.waypoints === 'string') {
-    try {
-      parsed.waypoints = JSON.parse(parsed.waypoints);
-    } catch {
-      parsed.waypoints = [];
-    }
-  }
-
-  // Ensure waypoints is always an array
-  if (!Array.isArray(parsed.waypoints)) {
-    parsed.waypoints = [];
-  }
-
-  return parsed;
-}
+/** JSON fields to parse on edge records */
+const EDGE_JSON_FIELDS = ['condition', 'waypoints'];
 
 // GET all edges (optionally filtered by process_id)
 router.get('/', async (req: Request, res: Response) => {
@@ -51,7 +23,7 @@ router.get('/', async (req: Request, res: Response) => {
     sql += ' ORDER BY created_at';
 
     const result = await query(sql, params);
-    const edges = result.rows.map((row) => parseEdgeJsonFields(row as Record<string, unknown>));
+    const edges = result.rows.map((row) => parseJsonFields(row as Record<string, unknown>, EDGE_JSON_FIELDS));
     res.json(edges);
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
@@ -72,7 +44,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Edge not found' });
     }
 
-    res.json(parseEdgeJsonFields(result.rows[0] as Record<string, unknown>));
+    res.json(parseJsonFields(result.rows[0] as Record<string, unknown>, EDGE_JSON_FIELDS));
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
@@ -130,7 +102,7 @@ router.post('/', async (req: Request, res: Response) => {
       [process_id, source_node_id, target_node_id, label || null, JSON.stringify(condition || {}), JSON.stringify(waypoints || [])]
     );
 
-    res.status(201).json(parseEdgeJsonFields(result.rows[0] as Record<string, unknown>));
+    res.status(201).json(parseJsonFields(result.rows[0] as Record<string, unknown>, EDGE_JSON_FIELDS));
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
@@ -156,7 +128,7 @@ router.put('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Edge not found' });
     }
 
-    res.json(parseEdgeJsonFields(result.rows[0] as Record<string, unknown>));
+    res.json(parseJsonFields(result.rows[0] as Record<string, unknown>, EDGE_JSON_FIELDS));
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
@@ -181,7 +153,7 @@ router.patch('/:id/waypoints', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Edge not found' });
     }
 
-    res.json(parseEdgeJsonFields(result.rows[0] as Record<string, unknown>));
+    res.json(parseJsonFields(result.rows[0] as Record<string, unknown>, EDGE_JSON_FIELDS));
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
