@@ -117,7 +117,34 @@ Graph RAG endpoints are under `/api/graph/*`.
 
 ## Testing
 
-Currently no automated tests. Manual testing via:
+### Automated Tests
+
+The API has a test suite using Vitest:
+
+```bash
+cd api
+
+# Run tests once
+npm test
+
+# Run tests in watch mode (re-run on file changes)
+npm run test:watch
+
+# Run tests with coverage report
+npm run test:coverage
+```
+
+**Test files:** `api/src/__tests__/`
+- `helpers.test.ts` - Tests for JSON parsing and SQL conversion utilities
+- `adminOnly.test.ts` - Tests for the adminOnly middleware
+
+**Test patterns:**
+- Unit tests use mocking to isolate from database (via `vi.mock`)
+- Tests for pure utility functions don't require mocking
+- Express middleware tests use mock Request/Response objects
+
+### Manual Testing
+
 - Frontend: http://localhost:5173
 - API: http://localhost:3001/api
 - Database viewer: http://localhost:5173/database
