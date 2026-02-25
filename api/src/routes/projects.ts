@@ -171,10 +171,10 @@ router.post('/', async (req: Request, res: Response) => {
       [project.id, process_id]
     );
 
-    // Find and mark start nodes as ready (SQLite-compatible syntax)
+    // Find and mark start nodes as ready
     await client.query(
       `UPDATE project_node_statuses
-       SET status = 'not_started'
+       SET status = 'ready'
        WHERE project_id = $1
          AND node_id IN (SELECT id FROM nodes WHERE type = 'start' AND process_id = $2)`,
       [project.id, process_id]
