@@ -10,6 +10,7 @@ export default function ProcessList() {
   const [showModal, setShowModal] = useState(false);
   const [newProcessName, setNewProcessName] = useState('');
   const [newProcessDesc, setNewProcessDesc] = useState('');
+  const [createError, setCreateError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => { loadProcesses(); }, []);
@@ -26,7 +27,8 @@ export default function ProcessList() {
   };
 
   const handleCreate = async () => {
-    if (!newProcessName.trim()) return;
+    if (!newProcessName.trim()) { setCreateError('Please enter a process name.'); return; }
+    setCreateError('');
     try {
       const process = await createProcess({ name: newProcessName, description: newProcessDesc });
       setProcesses([process, ...processes]);
@@ -35,7 +37,7 @@ export default function ProcessList() {
       setNewProcessDesc('');
       navigate(`/process/${process.id}`);
     } catch (error) {
-      console.error('Failed to create process:', error);
+      setCreateError((error as Error).message || 'Failed to create process.');
     }
   };
 
@@ -144,9 +146,12 @@ export default function ProcessList() {
               />
             </div>
           </div>
+          {createError && (
+            <p style={{ fontSize: '0.8125rem', color: 'var(--danger)', marginTop: '0.75rem' }}>{createError}</p>
+          )}
           <div className="modal-footer">
-            <button className="btn btn-ghost" onClick={() => setShowModal(false)}>Cancel</button>
-            <button className="btn btn-primary" onClick={handleCreate} disabled={!newProcessName.trim()}>
+            <button className="btn btn-ghost" onClick={() => { setShowModal(false); setCreateError(''); }}>Cancel</button>
+            <button className="btn btn-primary" onClick={handleCreate}>
               Create Process
             </button>
           </div>

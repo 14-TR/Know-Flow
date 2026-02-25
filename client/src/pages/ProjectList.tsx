@@ -17,6 +17,7 @@ export default function ProjectList() {
   const [showModal, setShowModal] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [selectedProcessId, setSelectedProcessId] = useState('');
+  const [createError, setCreateError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => { loadData(); }, []);
@@ -35,7 +36,9 @@ export default function ProjectList() {
   };
 
   const handleCreate = async () => {
-    if (!newProjectName.trim() || !selectedProcessId) return;
+    if (!newProjectName.trim()) { setCreateError('Please enter a project name.'); return; }
+    if (!selectedProcessId) { setCreateError('Please select a process template.'); return; }
+    setCreateError('');
     try {
       const project = await createProject({ name: newProjectName, process_id: selectedProcessId });
       setProjects([project, ...projects]);
@@ -43,7 +46,7 @@ export default function ProjectList() {
       setNewProjectName('');
       navigate(`/project/${project.id}`);
     } catch (error) {
-      console.error('Failed to create project:', error);
+      setCreateError((error as Error).message || 'Failed to create project.');
     }
   };
 
@@ -191,13 +194,12 @@ export default function ProjectList() {
               </select>
             </div>
           </div>
+          {createError && (
+            <p style={{ fontSize: '0.8125rem', color: 'var(--danger)', marginTop: '0.75rem' }}>{createError}</p>
+          )}
           <div className="modal-footer">
-            <button className="btn btn-ghost" onClick={() => setShowModal(false)}>Cancel</button>
-            <button
-              className="btn btn-primary"
-              onClick={handleCreate}
-              disabled={!newProjectName.trim() || !selectedProcessId}
-            >
+            <button className="btn btn-ghost" onClick={() => { setShowModal(false); setCreateError(''); }}>Cancel</button>
+            <button className="btn btn-primary" onClick={handleCreate}>
               Create Project
             </button>
           </div>

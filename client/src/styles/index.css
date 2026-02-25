@@ -316,6 +316,16 @@ label {
 }
 .section-subtitle { font-size: 0.75rem; color: var(--muted); }
 
+/* ─── Disabled states ─── */
+button:disabled, .btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ─── Modal body ─── */
+.modal-body { padding: 0; }
+
 /* ─── Dividers ─── */
 hr { border: none; border-top: 1px solid var(--border); }
 
