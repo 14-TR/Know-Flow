@@ -7,6 +7,7 @@ import DatabaseViewer from './pages/DatabaseViewer';
 import { GraphExplorer } from './pages/GraphExplorer';
 import Calendar from './pages/Calendar';
 import Dashboard from './pages/Dashboard';
+import SpecCoverage from './pages/SpecCoverage';
 
 export default function App() {
   const location = useLocation();
@@ -53,6 +54,7 @@ export default function App() {
         <Route path="/projects" element={<ProjectList />} />
         <Route path="/project/:id" element={<ProjectTracker />} />
         <Route path="/project/:id/calendar" element={<Calendar />} />
+        <Route path="/project/:id/coverage" element={<SpecCoverage />} />
         <Route path="/database" element={<DatabaseViewer />} />
         <Route path="/explorer" element={<GraphExplorer />} />
       </Routes>
