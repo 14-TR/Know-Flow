@@ -6,6 +6,7 @@ import ProjectList from './pages/ProjectList';
 import DatabaseViewer from './pages/DatabaseViewer';
 import { GraphExplorer } from './pages/GraphExplorer';
 import Calendar from './pages/Calendar';
+import Dashboard from './pages/Dashboard';
 
 export default function App() {
   const location = useLocation();
@@ -15,34 +16,23 @@ export default function App() {
       <header className="header">
         <h1>ProjectIQ</h1>
         <nav>
-          <Link
-            to="/"
-            className={location.pathname === '/' ? 'active' : ''}
-          >
+          <Link to="/" className={location.pathname === '/' ? 'active' : ''}>
+            Dashboard
+          </Link>
+          <Link to="/processes" className={location.pathname === '/processes' ? 'active' : ''}>
             Processes
           </Link>
-          <Link
-            to="/projects"
-            className={location.pathname.startsWith('/projects') ? 'active' : ''}
-          >
+          <Link to="/projects" className={location.pathname.startsWith('/projects') ? 'active' : ''}>
             Projects
           </Link>
-          <Link
-            to="/database"
-            className={location.pathname === '/database' ? 'active' : ''}
-          >
-            Database
-          </Link>
-          <Link
-            to="/explorer"
-            className={location.pathname === '/explorer' ? 'active' : ''}
-          >
+          <Link to="/explorer" className={location.pathname === '/explorer' ? 'active' : ''}>
             Explorer
           </Link>
         </nav>
       </header>
       <Routes>
-        <Route path="/" element={<ProcessList />} />
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/processes" element={<ProcessList />} />
         <Route path="/process/:id" element={<ProcessEditor />} />
         <Route path="/projects" element={<ProjectList />} />
         <Route path="/project/:id" element={<ProjectTracker />} />

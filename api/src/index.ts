@@ -8,6 +8,7 @@ import { projectNodeStatusRoutes } from './routes/projectNodeStatuses.js';
 import { debugRoutes } from './routes/debug.js';
 import { graphRagRoutes } from './routes/graphRag.js';
 import scheduleRouter from './routes/schedule.js';
+import dashboardRouter from './routes/dashboard.js';
 import { initDatabase, isAdmin, knowflowUser } from './utils/db.js';
 import { adminOnly } from './middleware/adminOnly.js';
 
@@ -41,6 +42,7 @@ app.use('/api/project-node-statuses', projectNodeStatusRoutes);
 app.use('/api/debug', debugRoutes);
 app.use('/api/graph', graphRagRoutes);
 app.use('/api', scheduleRouter);
+app.use('/api', dashboardRouter);
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
