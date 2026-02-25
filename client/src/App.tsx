@@ -5,6 +5,7 @@ import ProcessList from './pages/ProcessList';
 import ProjectList from './pages/ProjectList';
 import DatabaseViewer from './pages/DatabaseViewer';
 import { GraphExplorer } from './pages/GraphExplorer';
+import Calendar from './pages/Calendar';
 
 export default function App() {
   const location = useLocation();
@@ -12,7 +13,7 @@ export default function App() {
   return (
     <div className="app-container">
       <header className="header">
-        <h1>Know-Flow</h1>
+        <h1>ProjectIQ</h1>
         <nav>
           <Link
             to="/"
@@ -45,6 +46,7 @@ export default function App() {
         <Route path="/process/:id" element={<ProcessEditor />} />
         <Route path="/projects" element={<ProjectList />} />
         <Route path="/project/:id" element={<ProjectTracker />} />
+        <Route path="/project/:id/calendar" element={<Calendar />} />
         <Route path="/database" element={<DatabaseViewer />} />
         <Route path="/explorer" element={<GraphExplorer />} />
       </Routes>
