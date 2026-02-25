@@ -171,6 +171,20 @@ export default function ProjectTracker() {
                 <span className={`status-badge ${project.status}`}>
                   {project.status}
                 </span>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => navigate(`/project/${id}/calendar`)}
+                  title="View project calendar"
+                >
+                  📅 Calendar
+                </button>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => navigate(`/project/${id}/coverage`)}
+                  title="View spec coverage"
+                >
+                  📋 Spec Coverage
+                </button>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span style={{ fontSize: '0.75rem', color: '#666' }}>Progress:</span>
