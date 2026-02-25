@@ -30,6 +30,22 @@ export default function App() {
           </Link>
         </nav>
       </header>
+      {/* Mobile bottom tab bar */}
+      <nav className="mobile-tabs">
+        <Link to="/" className={location.pathname === '/' ? 'active' : ''}>
+          <span className="tab-icon">⊞</span>Dashboard
+        </Link>
+        <Link to="/processes" className={location.pathname === '/processes' ? 'active' : ''}>
+          <span className="tab-icon">⬡</span>Processes
+        </Link>
+        <Link to="/projects" className={location.pathname.startsWith('/projects') ? 'active' : ''}>
+          <span className="tab-icon">📁</span>Projects
+        </Link>
+        <Link to="/explorer" className={location.pathname === '/explorer' ? 'active' : ''}>
+          <span className="tab-icon">🔍</span>Explorer
+        </Link>
+      </nav>
+
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/processes" element={<ProcessList />} />
