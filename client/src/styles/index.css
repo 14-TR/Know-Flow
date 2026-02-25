@@ -170,6 +170,13 @@ body {
 }
 .btn-danger:hover { background: var(--danger); color: #fff; }
 
+.btn-success {
+  background: var(--success-muted);
+  color: var(--success);
+  border-color: transparent;
+}
+.btn-success:hover { background: var(--success); color: #fff; }
+
 .btn-sm { padding: 0.3125rem 0.625rem; font-size: 0.75rem; }
 .btn-lg { padding: 0.5625rem 1.125rem; font-size: 0.9375rem; }
 
