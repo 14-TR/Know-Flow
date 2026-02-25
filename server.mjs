@@ -53,7 +53,9 @@ setTimeout(() => {
     if (!fs.existsSync(filePath)) filePath = path.join(DIST, 'index.html');
     const ext = path.extname(filePath);
     try {
-      res.writeHead(200, { 'Content-Type': mime[ext] || 'text/plain' });
+      const headers = { 'Content-Type': mime[ext] || 'text/plain' };
+      if (ext === '.html') headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+      res.writeHead(200, headers);
       fs.createReadStream(filePath).pipe(res);
     } catch(e) { res.writeHead(500); res.end('Error'); }
   }).listen(PORT, HOST, () => console.log(`ProjectIQ: http://${HOST}:${PORT}`));

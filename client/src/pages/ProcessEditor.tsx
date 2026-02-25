@@ -403,6 +403,7 @@ function ProcessEditorInner() {
       setSelectedNode(updated);
     } catch (error) {
       console.error('Failed to update node:', error);
+      throw error;
     }
   };
 

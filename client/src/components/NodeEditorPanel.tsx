@@ -3,7 +3,7 @@ import type { ProcessNode, FormField } from '../types';
 
 interface Props {
   node: ProcessNode;
-  onUpdate: (data: Partial<ProcessNode>) => void;
+  onUpdate: (data: Partial<ProcessNode>) => void | Promise<void>;
   onDelete: () => void;
   onClose: () => void;
 }
@@ -15,6 +15,7 @@ export default function NodeEditorPanel({ node, onUpdate, onDelete, onClose }: P
   const [formFields, setFormFields] = useState<FormField[]>(
     node.form_schema?.fields || []
   );
+  const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
     setTitle(node.title);
@@ -23,13 +24,18 @@ export default function NodeEditorPanel({ node, onUpdate, onDelete, onClose }: P
     setFormFields(node.form_schema?.fields || []);
   }, [node]);
 
-  const handleSave = () => {
-    onUpdate({
-      title,
-      description: description || null,
-      type,
-      form_schema: { fields: formFields },
-    });
+  const handleSave = async () => {
+    setSaveError('');
+    try {
+      await onUpdate({
+        title,
+        description: description || null,
+        type,
+        form_schema: { fields: formFields },
+      });
+    } catch (e: any) {
+      setSaveError(e.message || 'Save failed');
+    }
   };
 
   const addFormField = () => {
@@ -98,7 +104,7 @@ export default function NodeEditorPanel({ node, onUpdate, onDelete, onClose }: P
             <div
               key={index}
               style={{
-                background: '#f5f5f5',
+                background: 'var(--surface-3)',
                 padding: '0.5rem',
                 borderRadius: 4,
                 marginTop: '0.5rem',
@@ -158,6 +164,9 @@ export default function NodeEditorPanel({ node, onUpdate, onDelete, onClose }: P
           ))}
         </div>
 
+        {saveError && (
+          <p style={{ fontSize: '0.8125rem', color: 'var(--danger)', marginBottom: '0.5rem' }}>{saveError}</p>
+        )}
         <div className="form-actions" style={{ justifyContent: 'space-between' }}>
           <button className="btn btn-danger btn-sm" onClick={onDelete}>
             Delete Node
