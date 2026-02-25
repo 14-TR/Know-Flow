@@ -15,7 +15,7 @@ export default function App() {
   return (
     <div className="app-container">
       <header className="header">
-        <h1>ProjectIQ</h1>
+        <h1>Project<span style={{ color: 'var(--primary)' }}>IQ</span></h1>
         <nav>
           <Link to="/" className={location.pathname === '/' ? 'active' : ''}>
             Dashboard

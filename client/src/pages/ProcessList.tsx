@@ -12,9 +12,7 @@ export default function ProcessList() {
   const [newProcessDesc, setNewProcessDesc] = useState('');
   const navigate = useNavigate();
 
-  useEffect(() => {
-    loadProcesses();
-  }, []);
+  useEffect(() => { loadProcesses(); }, []);
 
   const loadProcesses = async () => {
     try {
@@ -29,12 +27,8 @@ export default function ProcessList() {
 
   const handleCreate = async () => {
     if (!newProcessName.trim()) return;
-
     try {
-      const process = await createProcess({
-        name: newProcessName,
-        description: newProcessDesc,
-      });
+      const process = await createProcess({ name: newProcessName, description: newProcessDesc });
       setProcesses([process, ...processes]);
       setShowModal(false);
       setNewProcessName('');
@@ -47,29 +41,30 @@ export default function ProcessList() {
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this process?')) return;
-
+    if (!confirm('Delete this process template?')) return;
     try {
       await deleteProcess(id);
-      setProcesses(processes.filter((p) => p.id !== id));
+      setProcesses(processes.filter(p => p.id !== id));
     } catch (error) {
       alert((error as Error).message);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="main-content">
-        <div className="empty-state">Loading...</div>
-      </div>
-    );
-  }
+  if (loading) return <div className="main-content loading">Loading…</div>;
 
   return (
-    <div className="main-content" style={{ padding: '2rem' }}>
+    <div className="main-content">
       <div style={{ maxWidth: 800, margin: '0 auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-          <h2>Process Templates</h2>
+        {/* Header */}
+        <div className="section-header" style={{ marginBottom: '1.5rem' }}>
+          <div>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.03em' }}>
+              Process Templates
+            </h2>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--muted)', marginTop: '0.125rem' }}>
+              Reusable workflow blueprints
+            </p>
+          </div>
           <button className="btn btn-primary" onClick={() => setShowModal(true)}>
             + New Process
           </button>
@@ -79,33 +74,45 @@ export default function ProcessList() {
           <div className="empty-state">
             <h3>No processes yet</h3>
             <p>Create your first process template to get started.</p>
-            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+            <button className="btn btn-primary" style={{ marginTop: '1rem' }} onClick={() => setShowModal(true)}>
               Create Process
             </button>
           </div>
         ) : (
-          <div style={{ display: 'grid', gap: '1rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {processes.map((process) => (
               <div
                 key={process.id}
-                className="sidebar-item"
+                className="card"
                 onClick={() => navigate(`/process/${process.id}`)}
-                style={{ background: 'white', cursor: 'pointer' }}
+                style={{ cursor: 'pointer' }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <h3>{process.name}</h3>
-                    <p>{process.description || 'No description'}</p>
-                    <p style={{ marginTop: '0.5rem', fontSize: '0.7rem', color: '#999' }}>
-                      Version {process.version} - Created {new Date(process.created_at).toLocaleDateString()}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.25rem' }}>
+                      <span style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--fg)' }}>
+                        {process.name}
+                      </span>
+                      <span className="badge badge-primary">v{process.version}</span>
+                    </div>
+                    <p style={{ fontSize: '0.8125rem', color: 'var(--muted)', marginBottom: '0.5rem' }}>
+                      {process.description || 'No description'}
+                    </p>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--muted-fg)' }}>
+                      Created {new Date(process.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </p>
                   </div>
-                  <button
-                    className="btn btn-danger btn-sm"
-                    onClick={(e) => handleDelete(process.id, e)}
-                  >
-                    Delete
-                  </button>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={(e) => { e.stopPropagation(); navigate(`/process/${process.id}`); }}
+                    >
+                      Edit →
+                    </button>
+                    <button className="btn btn-danger btn-sm" onClick={(e) => handleDelete(process.id, e)}>
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -115,30 +122,32 @@ export default function ProcessList() {
 
       {showModal && (
         <Modal title="Create New Process" onClose={() => setShowModal(false)}>
-          <div className="form-group">
-            <label>Name</label>
-            <input
-              type="text"
-              value={newProcessName}
-              onChange={(e) => setNewProcessName(e.target.value)}
-              placeholder="Process name"
-              autoFocus
-            />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div>
+              <label>Name</label>
+              <input
+                type="text"
+                value={newProcessName}
+                onChange={(e) => setNewProcessName(e.target.value)}
+                placeholder="e.g. Cheyenne Development Permit"
+                autoFocus
+                onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+              />
+            </div>
+            <div>
+              <label>Description</label>
+              <textarea
+                value={newProcessDesc}
+                onChange={(e) => setNewProcessDesc(e.target.value)}
+                placeholder="What is this process for? (optional)"
+                style={{ minHeight: 80, resize: 'vertical' }}
+              />
+            </div>
           </div>
-          <div className="form-group">
-            <label>Description</label>
-            <textarea
-              value={newProcessDesc}
-              onChange={(e) => setNewProcessDesc(e.target.value)}
-              placeholder="Process description (optional)"
-            />
-          </div>
-          <div className="form-actions">
-            <button className="btn btn-secondary" onClick={() => setShowModal(false)}>
-              Cancel
-            </button>
-            <button className="btn btn-primary" onClick={handleCreate}>
-              Create
+          <div className="modal-footer">
+            <button className="btn btn-ghost" onClick={() => setShowModal(false)}>Cancel</button>
+            <button className="btn btn-primary" onClick={handleCreate} disabled={!newProcessName.trim()}>
+              Create Process
             </button>
           </div>
         </Modal>
