@@ -511,7 +511,7 @@ function ProcessEditorInner() {
               <span style={{ padding: '0.25rem 0.5rem', fontWeight: 500 }}>
                 {process.name}
               </span>
-              <div style={{ borderLeft: '1px solid #ddd', height: 24, margin: '0 0.5rem' }} />
+              <div style={{ borderLeft: '1px solid var(--border)', height: 24, margin: '0 0.5rem' }} />
               <button
                 className="btn btn-success btn-sm"
                 onClick={() => handleAddNode('start')}
@@ -526,7 +526,7 @@ function ProcessEditorInner() {
               </button>
               <button
                 className="btn btn-sm"
-                style={{ background: '#ff9800', color: 'white' }}
+                style={{ background: 'var(--warning-dim)', color: 'var(--warning)', border: '1px solid var(--warning)' }}
                 onClick={() => handleAddNode('decision')}
               >
                 + Decision
@@ -557,7 +557,7 @@ function ProcessEditorInner() {
               >
                 → Horizontal
               </button>
-              <div style={{ borderLeft: '1px solid #ddd', height: 24, margin: '0 0.5rem' }} />
+              <div style={{ borderLeft: '1px solid var(--border)', height: 24, margin: '0 0.5rem' }} />
               <button
                 className="btn btn-secondary btn-sm"
                 onClick={handleFitView}

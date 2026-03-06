@@ -193,11 +193,11 @@ export function GraphExplorer() {
 
   const getNodeTypeColor = (type: string) => {
     switch (type) {
-      case 'start': return '#22c55e';
-      case 'task': return '#3b82f6';
-      case 'decision': return '#eab308';
-      case 'end': return '#ef4444';
-      default: return '#6b7280';
+      case 'start': return '#34d399';    // --success
+      case 'task': return '#6366f1';     // --accent
+      case 'decision': return '#fbbf24'; // --warning
+      case 'end': return '#f87171';      // --danger
+      default: return '#52525b';         // --text-tertiary
     }
   };
 
