@@ -6,122 +6,129 @@ function ProjectNode({ data, selected }: NodeProps) {
   const nodeData = data as unknown as ProjectNodeWithStatus;
   const status = nodeData.project_status || 'not_started';
 
-  const getNodeStyle = () => {
-    const baseStyle: Record<string, string | number> = {};
+  // Status → design token colors
+  const statusColor: Record<string, string> = {
+    complete:    'var(--success)',
+    in_progress: 'var(--warning)',
+    skipped:     'var(--text-tertiary)',
+    not_started: 'var(--text-tertiary)',
+  };
 
-    switch (nodeData.type) {
-      case 'start':
-        baseStyle.background = '#e8f5e9';
-        baseStyle.borderColor = '#4caf50';
-        baseStyle.borderRadius = '20px';
-        break;
-      case 'end':
-        baseStyle.background = '#ffebee';
-        baseStyle.borderColor = '#f44336';
-        baseStyle.borderRadius = '20px';
-        break;
-      case 'decision':
-        baseStyle.background = '#fff8e1';
-        baseStyle.borderColor = '#ff9800';
-        break;
-      case 'task':
-      default:
-        baseStyle.background = '#e3f2fd';
-        baseStyle.borderColor = '#2196f3';
-        break;
-    }
+  const statusBg: Record<string, string> = {
+    complete:    'var(--success-dim)',
+    in_progress: 'var(--warning-dim)',
+    skipped:     'rgba(82,82,91,0.2)',
+    not_started: 'rgba(82,82,91,0.12)',
+  };
 
-    // Apply status-based styles
-    if (status === 'not_started') {
-      baseStyle.opacity = 0.6;
-    } else if (status === 'in_progress') {
-      baseStyle.boxShadow = '0 0 0 3px rgba(255, 152, 0, 0.5)';
-    } else if (status === 'complete') {
-      baseStyle.opacity = 1;
-    } else if (status === 'skipped') {
-      baseStyle.opacity = 0.4;
-      baseStyle.textDecoration = 'line-through';
-    }
+  // Node type → accent color
+  const typeColor: Record<string, string> = {
+    start:    'var(--success)',
+    end:      'var(--danger)',
+    decision: 'var(--warning)',
+    task:     'var(--accent)',
+  };
 
-    return baseStyle;
+  const borderColor = typeColor[nodeData.type] ?? 'var(--border-strong)';
+
+  const containerStyle: React.CSSProperties = {
+    position: 'relative',
+    padding: nodeData.type === 'decision' ? '14px 22px' : '10px 16px',
+    border: `1.5px solid ${borderColor}`,
+    borderRadius: nodeData.type === 'start' || nodeData.type === 'end' ? '24px' : 'var(--radius-md)',
+    minWidth: 150,
+    textAlign: 'center',
+    background: 'var(--bg-elevated)',
+    backdropFilter: 'blur(8px)',
+    boxShadow: selected
+      ? `0 0 0 2px var(--accent), var(--shadow-md)`
+      : status === 'in_progress'
+      ? `0 0 0 2px var(--warning), var(--shadow-sm)`
+      : 'var(--shadow-sm)',
+    opacity: status === 'not_started' ? 0.65 : status === 'skipped' ? 0.45 : 1,
+    transition: 'var(--transition)',
   };
 
   return (
-    <div
-      style={{
-        position: 'relative',
-        padding: nodeData.type === 'decision' ? '15px 25px' : '10px 15px',
-        border: '2px solid',
-        borderRadius: '8px',
-        minWidth: 150,
-        textAlign: 'center',
-        ...getNodeStyle(),
-        boxShadow: selected
-          ? '0 0 0 3px rgba(33, 150, 243, 0.5)'
-          : (getNodeStyle().boxShadow as string | undefined),
-      }}
-    >
+    <div style={containerStyle}>
       <Handle
         type="target"
         position={Position.Top}
-        style={{ background: '#555' }}
+        style={{ background: borderColor, border: 'none', width: 8, height: 8 }}
       />
-      <div style={{ fontWeight: 600, fontSize: 12 }}>
-        {nodeData.title}
-      </div>
-      <div
-        style={{ fontSize: 10, textTransform: 'uppercase', color: '#666', marginTop: 2 }}
-      >
-        {nodeData.type}
-      </div>
-      {nodeData.decision_result && (
-        <div className="decision-label" style={{ marginTop: 4 }}>
-          {nodeData.decision_result}
-        </div>
-      )}
-      <div
-        style={{
-          fontSize: 9,
-          marginTop: 4,
-          padding: '2px 6px',
-          borderRadius: 3,
-          background:
-            status === 'complete'
-              ? '#4caf50'
-              : status === 'in_progress'
-              ? '#ff9800'
-              : status === 'skipped'
-              ? '#9e9e9e'
-              : '#e0e0e0',
-          color: status === 'not_started' ? '#666' : 'white',
-        }}
-      >
-        {status.replace('_', ' ')}
-      </div>
+
+      {/* Completion badge */}
       {status === 'complete' && (
-        <div
-          style={{
-            position: 'absolute',
-            top: -8,
-            right: -8,
-            background: '#4caf50',
-            color: 'white',
-            width: 20,
-            height: 20,
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 12,
-          }}
-        >
+        <div style={{
+          position: 'absolute',
+          top: -8,
+          right: -8,
+          background: 'var(--success)',
+          color: '#000',
+          width: 20,
+          height: 20,
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 11,
+          fontWeight: 700,
+          boxShadow: '0 0 8px var(--success)',
+        }}>
           ✓
         </div>
       )}
+
+      <div style={{
+        fontWeight: 600,
+        fontSize: 12,
+        color: 'var(--text-primary)',
+        lineHeight: 1.3,
+      }}>
+        {nodeData.title}
+      </div>
+
+      <div style={{
+        fontSize: 9,
+        textTransform: 'uppercase',
+        letterSpacing: '0.06em',
+        color: borderColor,
+        marginTop: 3,
+        fontWeight: 600,
+      }}>
+        {nodeData.type}
+      </div>
+
+      {nodeData.decision_result && (
+        <div style={{
+          marginTop: 4,
+          fontSize: 9,
+          color: 'var(--warning)',
+          fontWeight: 500,
+        }}>
+          → {nodeData.decision_result}
+        </div>
+      )}
+
+      <div style={{
+        fontSize: 9,
+        marginTop: 6,
+        padding: '2px 8px',
+        borderRadius: 'var(--radius-sm)',
+        background: statusBg[status] ?? 'rgba(82,82,91,0.12)',
+        color: statusColor[status] ?? 'var(--text-tertiary)',
+        fontWeight: 600,
+        textTransform: 'capitalize',
+        letterSpacing: '0.04em',
+        display: 'inline-block',
+      }}>
+        {status.replace('_', ' ')}
+      </div>
+
       <Handle
         type="source"
         position={Position.Bottom}
-        style={{ background: '#555' }}
+        style={{ background: borderColor, border: 'none', width: 8, height: 8 }}
       />
     </div>
   );

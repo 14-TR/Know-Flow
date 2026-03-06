@@ -173,14 +173,14 @@ export default function ProjectTracker() {
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ fontSize: '0.75rem', color: '#666' }}>Progress:</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Progress:</span>
                 <div className="progress-bar" style={{ flex: 1, width: 150 }}>
                   <div
                     className="progress-bar-fill"
                     style={{ width: `${getProgress()}%` }}
                   />
                 </div>
-                <span style={{ fontSize: '0.75rem', color: '#666' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                   {getProgress()}%
                 </span>
               </div>
