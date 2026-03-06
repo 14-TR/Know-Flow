@@ -12,7 +12,7 @@ export default function App() {
   return (
     <div className="app-container">
       <header className="header">
-        <h1>Know-Flow</h1>
+        <h1>ProjectIQ</h1>
         <nav>
           <Link
             to="/"
