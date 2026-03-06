@@ -66,10 +66,13 @@ export default function ProcessList() {
   }
 
   return (
-    <div className="main-content" style={{ padding: '2rem' }}>
-      <div style={{ maxWidth: 800, margin: '0 auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-          <h2>Process Templates</h2>
+    <div className="list-page">
+      <div className="list-page-inner">
+        <div className="list-page-header">
+          <div>
+            <h1 className="list-page-title">Process Templates</h1>
+            <p className="list-page-subtitle">Define reusable workflows as node graphs</p>
+          </div>
           <button className="btn btn-primary" onClick={() => setShowModal(true)}>
             + New Process
           </button>
@@ -84,22 +87,35 @@ export default function ProcessList() {
             </button>
           </div>
         ) : (
-          <div style={{ display: 'grid', gap: '1rem' }}>
+          <div className="list-grid">
             {processes.map((process) => (
               <div
                 key={process.id}
-                className="sidebar-item"
+                className="list-card"
                 onClick={() => navigate(`/process/${process.id}`)}
-                style={{ background: 'white', cursor: 'pointer' }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <h3>{process.name}</h3>
-                    <p>{process.description || 'No description'}</p>
-                    <p style={{ marginTop: '0.5rem', fontSize: '0.7rem', color: '#999' }}>
-                      Version {process.version} - Created {new Date(process.created_at).toLocaleDateString()}
-                    </p>
+                <div className="list-card-body">
+                  <div className="list-card-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" />
+                    </svg>
                   </div>
+                  <div className="list-card-content">
+                    <h3 className="list-card-title">{process.name}</h3>
+                    <p className="list-card-desc">{process.description || 'No description'}</p>
+                    <span className="list-card-meta">
+                      v{process.version} · Created {new Date(process.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+                <div className="list-card-actions">
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={(e) => { e.stopPropagation(); navigate(`/process/${process.id}`); }}
+                  >
+                    Open →
+                  </button>
                   <button
                     className="btn btn-danger btn-sm"
                     onClick={(e) => handleDelete(process.id, e)}
