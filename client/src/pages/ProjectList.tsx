@@ -79,14 +79,18 @@ export default function ProjectList() {
   }
 
   return (
-    <div className="main-content" style={{ padding: '2rem' }}>
-      <div style={{ maxWidth: 800, margin: '0 auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-          <h2>Projects</h2>
+    <div className="list-page">
+      <div className="list-page-inner">
+        <div className="list-page-header">
+          <div>
+            <h1 className="list-page-title">Projects</h1>
+            <p className="list-page-subtitle">Track active work against process templates</p>
+          </div>
           <button
             className="btn btn-primary"
             onClick={() => setShowModal(true)}
             disabled={processes.length === 0}
+            title={processes.length === 0 ? 'Create a process template first' : undefined}
           >
             + New Project
           </button>
@@ -107,42 +111,55 @@ export default function ProjectList() {
             )}
           </div>
         ) : (
-          <div style={{ display: 'grid', gap: '1rem' }}>
-            {projects.map((project) => (
-              <div
-                key={project.id}
-                className="sidebar-item"
-                onClick={() => navigate(`/project/${project.id}`)}
-                style={{ background: 'white', cursor: 'pointer' }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <h3>{project.name}</h3>
-                      <span className={`status-badge ${project.status}`}>
-                        {project.status}
-                      </span>
+          <div className="list-grid">
+            {projects.map((project) => {
+              const pct = getProgress(project);
+              return (
+                <div
+                  key={project.id}
+                  className="list-card"
+                  onClick={() => navigate(`/project/${project.id}`)}
+                >
+                  <div className="list-card-body">
+                    <div className="list-card-icon list-card-icon--project">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <path d="M3 9h18M9 21V9" />
+                      </svg>
                     </div>
-                    <p>Process: {project.process_name}</p>
-                    <div className="progress-bar" style={{ marginTop: '0.5rem', width: '200px' }}>
-                      <div
-                        className="progress-bar-fill"
-                        style={{ width: `${getProgress(project)}%` }}
-                      />
+                    <div className="list-card-content">
+                      <div className="list-card-title-row">
+                        <h3 className="list-card-title">{project.name}</h3>
+                        <span className={`status-badge ${project.status}`}>{project.status}</span>
+                      </div>
+                      <p className="list-card-desc">Process: {project.process_name}</p>
+                      <div className="list-card-progress">
+                        <div className="progress-bar">
+                          <div className="progress-bar-fill" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="list-card-progress-label">
+                          {pct}% &middot; {project.completed_nodes}/{project.total_nodes} nodes
+                        </span>
+                      </div>
                     </div>
-                    <p style={{ marginTop: '0.25rem', fontSize: '0.7rem', color: '#666' }}>
-                      {getProgress(project)}% complete ({project.completed_nodes}/{project.total_nodes} nodes)
-                    </p>
                   </div>
-                  <button
-                    className="btn btn-danger btn-sm"
-                    onClick={(e) => handleDelete(project.id, e)}
-                  >
-                    Delete
-                  </button>
+                  <div className="list-card-actions">
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={(e) => { e.stopPropagation(); navigate(`/project/${project.id}`); }}
+                    >
+                      Open →
+                    </button>
+                    <button
+                      className="btn btn-danger btn-sm"
+                      onClick={(e) => handleDelete(project.id, e)}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
