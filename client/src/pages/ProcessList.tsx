@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getProcesses, createProcess, deleteProcess } from '../services/api';
 import type { Process } from '../types';
 import Modal from '../components/Modal';
+import OnboardingBanner, { useOnboardingDismissed } from '../components/OnboardingBanner';
 
 export default function ProcessList() {
   const [processes, setProcesses] = useState<Process[]>([]);
@@ -10,6 +11,7 @@ export default function ProcessList() {
   const [showModal, setShowModal] = useState(false);
   const [newProcessName, setNewProcessName] = useState('');
   const [newProcessDesc, setNewProcessDesc] = useState('');
+  const [onboardingDismissed, dismissOnboarding] = useOnboardingDismissed();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -68,6 +70,7 @@ export default function ProcessList() {
   return (
     <div className="list-page">
       <div className="list-page-inner">
+        {!onboardingDismissed && <OnboardingBanner onDismiss={dismissOnboarding} />}
         <div className="list-page-header">
           <div>
             <h1 className="list-page-title">Process Templates</h1>
