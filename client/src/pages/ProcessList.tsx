@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getProcesses, createProcess, deleteProcess } from '../services/api';
+import { getProcesses, createProcess, deleteProcess, exportProcess, importProcess } from '../services/api';
 import type { Process } from '../types';
 import Modal from '../components/Modal';
 import OnboardingBanner, { useOnboardingDismissed } from '../components/OnboardingBanner';
@@ -13,6 +13,8 @@ export default function ProcessList() {
   const [newProcessDesc, setNewProcessDesc] = useState('');
   const [onboardingDismissed, dismissOnboarding] = useOnboardingDismissed();
   const navigate = useNavigate();
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
 
   useEffect(() => {
     loadProcesses();
@@ -59,6 +61,40 @@ export default function ProcessList() {
     }
   };
 
+  const handleExport = async (id: string, name: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const blob = await exportProcess(id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${name.replace(/[^a-zA-Z0-9]/g, '_')}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      alert('Export failed: ' + (error as Error).message);
+    }
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    setImportError(null);
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const result = await importProcess(data);
+      setProcesses(prev => [result.process as any, ...prev]);
+      await loadProcesses(); // Reload to get full data
+    } catch (error) {
+      setImportError('Import failed: ' + (error as Error).message);
+    } finally {
+      setImporting(false);
+      e.target.value = '';
+    }
+  };
+
   if (loading) {
     return (
       <div className="main-content">
@@ -71,14 +107,37 @@ export default function ProcessList() {
     <div className="list-page">
       <div className="list-page-inner">
         {!onboardingDismissed && <OnboardingBanner onDismiss={dismissOnboarding} />}
+        {importError && (
+          <div style={{
+            background: 'var(--danger-dim)',
+            color: 'var(--danger)',
+            border: '1px solid rgba(248,113,113,0.2)',
+            borderRadius: 'var(--radius)',
+            padding: '0.75rem 1rem',
+            marginBottom: '1rem',
+            fontSize: '0.875rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}>
+            {importError}
+            <button onClick={() => setImportError(null)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '1.1rem' }}>×</button>
+          </div>
+        )}
         <div className="list-page-header">
           <div>
             <h1 className="list-page-title">Process Templates</h1>
             <p className="list-page-subtitle">Define reusable workflows as node graphs</p>
           </div>
-          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-            + New Process
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <label className="btn btn-secondary" style={{ cursor: 'pointer', margin: 0 }}>
+              {importing ? 'Importing…' : '↑ Import'}
+              <input type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
+            </label>
+            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+              + New Process
+            </button>
+          </div>
         </div>
 
         {processes.length === 0 ? (
@@ -118,6 +177,13 @@ export default function ProcessList() {
                     onClick={(e) => { e.stopPropagation(); navigate(`/process/${process.id}`); }}
                   >
                     Open →
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={(e) => handleExport(process.id, process.name, e)}
+                    title="Export as JSON"
+                  >
+                    ↓ Export
                   </button>
                   <button
                     className="btn btn-danger btn-sm"

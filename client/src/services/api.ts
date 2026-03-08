@@ -376,3 +376,22 @@ export const downloadExport = (content: string, filename: string, mimeType: stri
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 };
+
+export const exportProcess = async (id: string): Promise<Blob> => {
+  const res = await fetch(`${API_URL}/processes/${id}/export`);
+  if (!res.ok) throw new Error('Export failed');
+  return res.blob();
+};
+
+export interface ImportResult {
+  message: string;
+  process: { id: string; name: string };
+  stats: { nodes: number; edges: number };
+}
+
+export const importProcess = (data: unknown): Promise<ImportResult> =>
+  fetchApi<ImportResult>('/processes/import', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
