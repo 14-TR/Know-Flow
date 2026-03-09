@@ -50,7 +50,7 @@ export default function EdgeEditorPanel({ edge, onUpdate, onDelete, onClose }: P
             onChange={(e) => setLabel(e.target.value)}
             placeholder='e.g., "Yes" or "No"'
           />
-          <p style={{ fontSize: '0.7rem', color: '#666', marginTop: '0.25rem' }}>
+          <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
             This label appears on the edge and is used for decision routing.
           </p>
         </div>
@@ -70,7 +70,7 @@ export default function EdgeEditorPanel({ edge, onUpdate, onDelete, onClose }: P
             onChange={(e) => setConditionValue(e.target.value)}
             placeholder="Expected value"
           />
-          <p style={{ fontSize: '0.7rem', color: '#666', marginTop: '0.25rem' }}>
+          <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
             When the source node's form field matches this value, this edge is traversed.
           </p>
         </div>
