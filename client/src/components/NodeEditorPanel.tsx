@@ -98,7 +98,7 @@ export default function NodeEditorPanel({ node, onUpdate, onDelete, onClose }: P
             <div
               key={index}
               style={{
-                background: '#f5f5f5',
+                background: 'var(--bg-elevated)',
                 padding: '0.5rem',
                 borderRadius: 4,
                 marginTop: '0.5rem',
