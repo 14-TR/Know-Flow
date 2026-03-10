@@ -320,9 +320,8 @@ export const getProjectHistory = (projectId: string) =>
 export type ExportFormat = 'json' | 'markdown' | 'dot' | 'mermaid' | 'llm-context';
 export type ProjectExportFormat = 'json' | 'markdown' | 'llm-context';
 
-// Export functions - these return raw text/data, not JSON
-
-export const exportProcess = async (
+// Graph RAG export functions (rich format with full context)
+export const exportProcessGraph = async (
   processId: string,
   format: ExportFormat = 'json'
 ): Promise<string> => {
@@ -343,7 +342,7 @@ export const exportProcess = async (
   return response.text();
 };
 
-export const exportProject = async (
+export const exportProjectGraph = async (
   projectId: string,
   format: ProjectExportFormat = 'json'
 ): Promise<string> => {
@@ -377,6 +376,7 @@ export const downloadExport = (content: string, filename: string, mimeType: stri
   URL.revokeObjectURL(url);
 };
 
+// Process export/import (backup format via /api/processes)
 export const exportProcess = async (id: string): Promise<Blob> => {
   const res = await fetch(`${API_URL}/processes/${id}/export`);
   if (!res.ok) throw new Error('Export failed');
@@ -391,6 +391,26 @@ export interface ImportResult {
 
 export const importProcess = (data: unknown): Promise<ImportResult> =>
   fetchApi<ImportResult>('/processes/import', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+
+// Project export/import (backup format via /api/projects)
+export const exportProject = async (id: string): Promise<Blob> => {
+  const res = await fetch(`${API_URL}/projects/${id}/export`);
+  if (!res.ok) throw new Error('Export failed');
+  return res.blob();
+};
+
+export interface ImportProjectResult {
+  message: string;
+  project: { id: string; name: string };
+  stats: { node_statuses: number };
+}
+
+export const importProject = (data: unknown): Promise<ImportProjectResult> =>
+  fetchApi<ImportProjectResult>('/projects/import', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),

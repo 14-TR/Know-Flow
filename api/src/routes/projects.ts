@@ -237,4 +237,138 @@ router.delete('/:id', async (req: Request, res: Response) => {
   }
 });
 
+// GET export project as JSON backup
+router.get('/:id/export', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const projectResult = await query(
+      `SELECT p.*, pr.name as process_name, pr.description as process_description
+       FROM projects p
+       JOIN processes pr ON p.process_id = pr.id
+       WHERE p.id = $1`,
+      [id]
+    );
+
+    if (projectResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const project = projectResult.rows[0] as Record<string, unknown>;
+
+    const nodeStatusesResult = await query(
+      `SELECT pns.node_id, pns.status, pns.decision_result, pns.form_data,
+              pns.assigned_to, pns.notes, pns.started_at, pns.completed_at
+       FROM project_node_statuses pns
+       WHERE pns.project_id = $1`,
+      [id]
+    );
+
+    const exportData = {
+      _export_version: 1,
+      _exported_at: new Date().toISOString(),
+      project: {
+        name: project.name,
+        process_id: project.process_id,
+        status: project.status,
+        metadata: project.metadata,
+      },
+      node_statuses: nodeStatusesResult.rows,
+    };
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${String(project.name).replace(/[^a-zA-Z0-9]/g, '_')}.json"`
+    );
+    res.json(exportData);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// POST import project from JSON backup
+router.post('/import', async (req: Request, res: Response) => {
+  const client = await getClient();
+
+  try {
+    const payload = req.body;
+
+    if (!payload?.project?.name || !payload?.project?.process_id) {
+      return res.status(400).json({
+        error: 'Invalid export file: missing project name or process_id'
+      });
+    }
+
+    const { project: projectData, node_statuses: nodeStatuses = [] } = payload;
+
+    await client.query('BEGIN');
+
+    // Create the new project
+    const projectResult = await client.query(
+      `INSERT INTO projects (name, process_id, status, metadata)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [
+        projectData.name + ' (imported)',
+        projectData.process_id,
+        projectData.status || 'active',
+        JSON.stringify(projectData.metadata || {}),
+      ]
+    );
+
+    const newProject = projectResult.rows[0] as Record<string, unknown>;
+    const newProjectId = newProject.id as string;
+
+    // Initialize all node statuses as not_started first
+    await client.query(
+      `INSERT INTO project_node_statuses (project_id, node_id, status)
+       SELECT $1, id, 'not_started'
+       FROM nodes WHERE process_id = $2`,
+      [newProjectId, projectData.process_id]
+    );
+
+    // Restore saved node statuses
+    let restoredCount = 0;
+    for (const ns of nodeStatuses as Array<Record<string, unknown>>) {
+      if (!ns.node_id) continue;
+
+      await client.query(
+        `UPDATE project_node_statuses
+         SET status = $1,
+             decision_result = $2,
+             form_data = $3,
+             notes = $4,
+             started_at = $5,
+             completed_at = $6
+         WHERE project_id = $7 AND node_id = $8`,
+        [
+          ns.status || 'not_started',
+          ns.decision_result || null,
+          typeof ns.form_data === 'string' ? ns.form_data : JSON.stringify(ns.form_data || {}),
+          ns.notes || null,
+          ns.started_at || null,
+          ns.completed_at || null,
+          newProjectId,
+          ns.node_id,
+        ]
+      );
+      restoredCount++;
+    }
+
+    await client.query('COMMIT');
+
+    res.status(201).json({
+      message: 'Project imported successfully',
+      project: { id: newProjectId, name: newProject.name as string },
+      stats: { node_statuses: restoredCount },
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: (err as Error).message });
+  } finally {
+    client.release();
+  }
+});
+
 export { router as projectRoutes };
