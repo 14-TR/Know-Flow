@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getProjects, getProcesses, createProject, deleteProject } from '../services/api';
+import { getProjects, getProcesses, createProject, deleteProject, exportProject, importProject } from '../services/api';
 import type { Project, Process } from '../types';
 import Modal from '../components/Modal';
 
@@ -12,6 +12,8 @@ export default function ProjectList() {
   const [newProjectName, setNewProjectName] = useState('');
   const [selectedProcessId, setSelectedProcessId] = useState('');
   const navigate = useNavigate();
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -64,6 +66,40 @@ export default function ProjectList() {
     }
   };
 
+  const handleExport = async (id: string, name: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const blob = await exportProject(id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${name.replace(/[^a-zA-Z0-9]/g, '_')}_backup.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      alert('Export failed: ' + (error as Error).message);
+    }
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    setImportError(null);
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      await importProject(data);
+      await loadData();
+      navigate(`/projects`);
+    } catch (error) {
+      setImportError('Import failed: ' + (error as Error).message);
+    } finally {
+      setImporting(false);
+      e.target.value = '';
+    }
+  };
+
   const getProgress = (project: Project) => {
     const completed = project.completed_nodes || 0;
     const total = project.total_nodes || 1;
@@ -86,15 +122,28 @@ export default function ProjectList() {
             <h1 className="list-page-title">Projects</h1>
             <p className="list-page-subtitle">Track active work against process templates</p>
           </div>
-          <button
-            className="btn btn-primary"
-            onClick={() => setShowModal(true)}
-            disabled={processes.length === 0}
-            title={processes.length === 0 ? 'Create a process template first' : undefined}
-          >
-            + New Project
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <label className="btn btn-secondary" style={{ cursor: 'pointer', margin: 0 }} title="Import a project backup">
+              {importing ? 'Importing…' : '↑ Import'}
+              <input type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
+            </label>
+            <button
+              className="btn btn-primary"
+              onClick={() => setShowModal(true)}
+              disabled={processes.length === 0}
+              title={processes.length === 0 ? 'Create a process template first' : undefined}
+            >
+              + New Project
+            </button>
+          </div>
         </div>
+
+        {importError && (
+          <div className="error-banner" style={{ marginBottom: '1rem' }}>
+            {importError}
+            <button onClick={() => setImportError(null)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '1.1rem' }}>×</button>
+          </div>
+        )}
 
         {projects.length === 0 ? (
           <div className="empty-state">
@@ -149,6 +198,13 @@ export default function ProjectList() {
                       onClick={(e) => { e.stopPropagation(); navigate(`/project/${project.id}`); }}
                     >
                       Open →
+                    </button>
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={(e) => handleExport(project.id, project.name, e)}
+                      title="Export project backup"
+                    >
+                      ↓ Export
                     </button>
                     <button
                       className="btn btn-danger btn-sm"
