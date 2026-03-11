@@ -18,6 +18,7 @@ import { getProject, updateProjectNodeStatus } from '../services/api';
 import type { Project, ProjectNodeWithStatus, ProjectEdgeWithStatus, ProjectNodeStatus } from '../types';
 import ProjectNode from '../components/ProjectNode';
 import NodeStatusPanel from '../components/NodeStatusPanel';
+import './ProjectTracker.css';
 
 const nodeTypes = {
   project: ProjectNode,
@@ -41,7 +42,6 @@ export default function ProjectTracker() {
       const data = await getProject(projectId);
       setProject(data);
 
-      // Convert to React Flow format with project status
       const flowNodes: Node[] = (data.nodes || []).map((n) => ({
         id: n.id,
         type: 'project',
@@ -58,7 +58,7 @@ export default function ProjectTracker() {
         type: 'smoothstep',
         animated: !e.traversed && e.label !== null,
         style: e.traversed
-          ? { stroke: '#4caf50', strokeWidth: 2 }
+          ? { stroke: '#34d399', strokeWidth: 2 }
           : undefined,
         data: { ...e },
       }));
@@ -96,11 +96,8 @@ export default function ProjectTracker() {
 
     try {
       await updateProjectNodeStatus(statusId, updates);
-
-      // Reload project to get updated data
       await loadProject(id);
 
-      // Keep the same node selected but with updated data
       if (project?.nodes) {
         const updatedNode = project.nodes.find((n) => n.id === selectedNode.id);
         if (updatedNode) setSelectedNode(updatedNode);
@@ -139,6 +136,8 @@ export default function ProjectTracker() {
     );
   }
 
+  const progress = getProgress();
+
   return (
     <div className="main-content">
       <div className="graph-container">
@@ -159,30 +158,28 @@ export default function ProjectTracker() {
           <Background variant={BackgroundVariant.Dots} gap={20} />
 
           <Panel position="top-left">
-            <div className="panel toolbar" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.5rem' }}>
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <div className="panel toolbar tracker-toolbar">
+              <div className="tracker-toolbar-row">
                 <button
                   className="btn btn-secondary btn-sm"
                   onClick={() => navigate('/projects')}
                 >
-                  &larr; Back
+                  ← Back
                 </button>
-                <span style={{ fontWeight: 500 }}>{project.name}</span>
+                <span className="tracker-project-name">{project.name}</span>
                 <span className={`status-badge ${project.status}`}>
                   {project.status}
                 </span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Progress:</span>
-                <div className="progress-bar" style={{ flex: 1, width: 150 }}>
+              <div className="tracker-progress-row">
+                <span className="tracker-progress-label">Progress</span>
+                <div className="tracker-progress-bar">
                   <div
-                    className="progress-bar-fill"
-                    style={{ width: `${getProgress()}%` }}
+                    className="tracker-progress-bar-fill"
+                    style={{ width: `${progress}%` }}
                   />
                 </div>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                  {getProgress()}%
-                </span>
+                <span className="tracker-progress-pct">{progress}%</span>
               </div>
             </div>
           </Panel>
