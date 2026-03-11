@@ -1,0 +1,93 @@
+/* ============================================
+   Project Tracker — Apple Dark Mode
+   Uses CSS variables from index.css
+   ============================================ */
+
+/* ============================================
+   Toolbar Panel (top-left overlay on graph)
+   ============================================ */
+
+.tracker-toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+}
+
+.tracker-toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+}
+
+.tracker-project-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+/* ============================================
+   Progress Row
+   ============================================ */
+
+.tracker-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tracker-progress-label {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.tracker-progress-bar {
+  flex: 1;
+  min-width: 100px;
+  max-width: 160px;
+  height: 4px;
+  background: var(--bg-elevated);
+  border-radius: 2px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.tracker-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--success));
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+.tracker-progress-pct {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  min-width: 2.5rem;
+  text-align: right;
+}
+
+/* ============================================
+   Responsive
+   ============================================ */
+
+@media (max-width: 640px) {
+  .tracker-project-name {
+    max-width: 120px;
+  }
+
+  .tracker-progress-bar {
+    min-width: 60px;
+    max-width: 100px;
+  }
+}

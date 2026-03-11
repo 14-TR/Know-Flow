@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { ProjectNodeWithStatus, FormField, ProjectNodeStatus } from '../types';
+import './NodeStatusPanel.css';
 
 interface Props {
   node: ProjectNodeWithStatus;
@@ -32,7 +33,12 @@ export default function NodeStatusPanel({ node, onUpdate, onClose }: Props) {
 
   const handleSave = () => {
     if (!node.status_id) return;
-    onUpdate(node.status_id, { status, decision_result: decisionResult || undefined, form_data: formData, notes: notes || undefined });
+    onUpdate(node.status_id, {
+      status,
+      decision_result: decisionResult || undefined,
+      form_data: formData,
+      notes: notes || undefined,
+    });
   };
 
   const handleStartTask = () => {
@@ -46,7 +52,12 @@ export default function NodeStatusPanel({ node, onUpdate, onClose }: Props) {
       alert('Please select a decision result before completing this node.');
       return;
     }
-    onUpdate(node.status_id, { status: 'complete', decision_result: decisionResult || undefined, form_data: formData, notes: notes || undefined });
+    onUpdate(node.status_id, {
+      status: 'complete',
+      decision_result: decisionResult || undefined,
+      form_data: formData,
+      notes: notes || undefined,
+    });
   };
 
   const renderFormField = (field: FormField) => {
@@ -54,19 +65,47 @@ export default function NodeStatusPanel({ node, onUpdate, onClose }: Props) {
     switch (field.type) {
       case 'select':
         return (
-          <select value={value as string} onChange={(e) => setFormData({ ...formData, [field.name]: e.target.value })}>
+          <select
+            value={value as string}
+            onChange={(e) => setFormData({ ...formData, [field.name]: e.target.value })}
+          >
             <option value="">Select...</option>
-            {field.options?.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+            {field.options?.map((opt) => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
           </select>
         );
       case 'textarea':
-        return <textarea value={value as string} onChange={(e) => setFormData({ ...formData, [field.name]: e.target.value })} />;
+        return (
+          <textarea
+            value={value as string}
+            onChange={(e) => setFormData({ ...formData, [field.name]: e.target.value })}
+          />
+        );
       case 'number':
-        return <input type="number" value={value as string} onChange={(e) => setFormData({ ...formData, [field.name]: e.target.value })} />;
+        return (
+          <input
+            type="number"
+            value={value as string}
+            onChange={(e) => setFormData({ ...formData, [field.name]: e.target.value })}
+          />
+        );
       case 'date':
-        return <input type="date" value={value as string} onChange={(e) => setFormData({ ...formData, [field.name]: e.target.value })} />;
+        return (
+          <input
+            type="date"
+            value={value as string}
+            onChange={(e) => setFormData({ ...formData, [field.name]: e.target.value })}
+          />
+        );
       default:
-        return <input type="text" value={value as string} onChange={(e) => setFormData({ ...formData, [field.name]: e.target.value })} />;
+        return (
+          <input
+            type="text"
+            value={value as string}
+            onChange={(e) => setFormData({ ...formData, [field.name]: e.target.value })}
+          />
+        );
     }
   };
 
@@ -75,76 +114,51 @@ export default function NodeStatusPanel({ node, onUpdate, onClose }: Props) {
       ? formFields.find((f) => f.type === 'select')?.options || ['Yes', 'No']
       : [];
 
-  // Status badge styles
-  const statusStyles: Record<string, React.CSSProperties> = {
-    complete:    { background: 'var(--success-dim)',  color: 'var(--success)',  border: '1px solid var(--success)' },
-    in_progress: { background: 'var(--warning-dim)',  color: 'var(--warning)',  border: '1px solid var(--warning)' },
-    not_started: { background: 'rgba(82,82,91,0.15)', color: 'var(--text-secondary)', border: '1px solid var(--border)' },
-    skipped:     { background: 'rgba(82,82,91,0.15)', color: 'var(--text-tertiary)',   border: '1px solid var(--border)' },
-  };
-
-  // Node type accent
-  const typeColor: Record<string, string> = {
-    start: 'var(--success)', end: 'var(--danger)', decision: 'var(--warning)', task: 'var(--accent)',
-  };
-
   return (
     <div className="panel node-editor">
       <div className="panel-header">
-        <h3 style={{ color: 'var(--text-primary)' }}>{node.title}</h3>
+        <h3>{node.title}</h3>
         <button className="btn btn-icon btn-secondary btn-sm" onClick={onClose}>✕</button>
       </div>
       <div className="panel-content">
+
         {/* Status + type row */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-          <span style={{
-            fontSize: '0.7rem',
-            fontWeight: 600,
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-            padding: '3px 10px',
-            borderRadius: 'var(--radius-sm)',
-            ...statusStyles[status],
-          }}>
+        <div className="nsp-meta-row">
+          <span className={`nsp-status-badge ${status}`}>
             {status.replace('_', ' ')}
           </span>
-          <span style={{
-            fontSize: '0.7rem',
-            fontWeight: 600,
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-            color: typeColor[node.type] ?? 'var(--text-secondary)',
-          }}>
+          <span className={`nsp-type-label ${node.type}`}>
             {node.type}
           </span>
         </div>
 
         {node.description && (
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.5 }}>
-            {node.description}
-          </p>
+          <p className="nsp-description">{node.description}</p>
         )}
 
         {node.type === 'decision' && (
           <div className="form-group">
             <label>Decision Result</label>
-            <select value={decisionResult} onChange={(e) => setDecisionResult(e.target.value)}>
+            <select
+              value={decisionResult}
+              onChange={(e) => setDecisionResult(e.target.value)}
+            >
               <option value="">Select decision...</option>
-              {decisionOptions.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+              {decisionOptions.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
             </select>
           </div>
         )}
 
         {formFields.length > 0 && (
-          <div style={{ marginBottom: '1rem' }}>
-            <h4 style={{ fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: '0.75rem' }}>
-              Form Data
-            </h4>
+          <div className="nsp-form-section">
+            <p className="nsp-section-title">Form Data</p>
             {formFields.map((field) => (
               <div className="form-group" key={field.name}>
                 <label>
                   {field.label}
-                  {field.required && <span style={{ color: 'var(--danger)' }}> *</span>}
+                  {field.required && <span className="nsp-required">*</span>}
                 </label>
                 {renderFormField(field)}
               </div>
@@ -154,42 +168,41 @@ export default function NodeStatusPanel({ node, onUpdate, onClose }: Props) {
 
         <div className="form-group">
           <label>Notes</label>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Add notes about this step..." />
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Add notes about this step..."
+          />
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+        <div className="nsp-actions">
           {status === 'not_started' && (
-            <button className="btn btn-primary" onClick={handleStartTask} style={{ width: '100%' }}>
+            <button className="btn btn-primary" onClick={handleStartTask}>
               Start Task
             </button>
           )}
           {status === 'in_progress' && (
             <>
-              <button className="btn btn-success" onClick={handleCompleteTask} style={{ width: '100%' }}>
+              <button className="btn btn-success" onClick={handleCompleteTask}>
                 ✓ Complete Task
               </button>
-              <button className="btn btn-secondary" onClick={handleSave} style={{ width: '100%' }}>
+              <button className="btn btn-secondary" onClick={handleSave}>
                 Save Progress
               </button>
             </>
           )}
           {status === 'complete' && (
-            <div style={{
-              textAlign: 'center',
-              padding: '0.75rem',
-              background: 'var(--success-dim)',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--success)',
-            }}>
-              <div style={{ color: 'var(--success)', fontWeight: 600, fontSize: '0.875rem' }}>✓ Task Completed</div>
+            <div className="nsp-complete-box">
+              <div className="nsp-complete-box-title">✓ Task Completed</div>
               {node.completed_at && (
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 4 }}>
+                <div className="nsp-complete-box-date">
                   {new Date(node.completed_at).toLocaleString()}
                 </div>
               )}
             </div>
           )}
         </div>
+
       </div>
     </div>
   );
