@@ -19,6 +19,7 @@ import type { Project, ProjectNodeWithStatus, ProjectEdgeWithStatus, ProjectNode
 import ProjectNode from '../components/ProjectNode';
 import NodeStatusPanel from '../components/NodeStatusPanel';
 import './ProjectTracker.css';
+import { PageSpinner } from '../components/LoadingSkeleton';
 
 const nodeTypes = {
   project: ProjectNode,
@@ -116,11 +117,7 @@ export default function ProjectTracker() {
   };
 
   if (loading) {
-    return (
-      <div className="main-content">
-        <div className="empty-state">Loading...</div>
-      </div>
-    );
+    return <PageSpinner />;
   }
 
   if (!project) {

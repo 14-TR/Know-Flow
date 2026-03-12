@@ -3,6 +3,7 @@ import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import ProcessEditor from './pages/ProcessEditor';
 import ProjectTracker from './pages/ProjectTracker';
 import ProcessList from './pages/ProcessList';
+import { ToastProvider } from './components/Toast';
 import ProjectList from './pages/ProjectList';
 import DatabaseViewer from './pages/DatabaseViewer';
 import { GraphExplorer } from './pages/GraphExplorer';
@@ -33,6 +34,7 @@ export default function App() {
   ];
 
   return (
+    <ToastProvider>
     <div className="app-container">
       <header className="header">
         <h1>ProjectIQ</h1>
@@ -84,5 +86,6 @@ export default function App() {
         <Route path="/explorer" element={<GraphExplorer />} />
       </Routes>
     </div>
+    </ToastProvider>
   );
 }

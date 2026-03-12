@@ -36,6 +36,7 @@ import CustomNode from '../components/CustomNode';
 import EditableEdge from '../components/EditableEdge';
 import NodeEditorPanel from '../components/NodeEditorPanel';
 import EdgeEditorPanel from '../components/EdgeEditorPanel';
+import { PageSpinner } from '../components/LoadingSkeleton';
 
 const nodeTypes = {
   custom: CustomNode,
@@ -456,11 +457,7 @@ function ProcessEditorInner() {
   };
 
   if (loading) {
-    return (
-      <div className="main-content">
-        <div className="empty-state">Loading...</div>
-      </div>
-    );
+    return <PageSpinner />;
   }
 
   if (!process) {

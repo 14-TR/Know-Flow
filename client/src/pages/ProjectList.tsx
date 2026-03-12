@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { getProjects, getProcesses, createProject, deleteProject, exportProject, importProject } from '../services/api';
 import type { Project, Process } from '../types';
 import Modal from '../components/Modal';
+import { useToast } from '../components/Toast';
+import { ListSkeleton } from '../components/LoadingSkeleton';
 
 export default function ProjectList() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -14,6 +16,8 @@ export default function ProjectList() {
   const navigate = useNavigate();
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     loadData();
@@ -27,11 +31,13 @@ export default function ProjectList() {
       ]);
       setProjects(projectsData);
       setProcesses(processesData);
+      setLoadError(null);
       if (processesData.length > 0) {
         setSelectedProcessId(processesData[0].id);
       }
     } catch (error) {
       console.error('Failed to load data:', error);
+      setLoadError('Failed to load projects. Please refresh and try again.');
     } finally {
       setLoading(false);
     }
@@ -62,7 +68,7 @@ export default function ProjectList() {
       await deleteProject(id);
       setProjects(projects.filter((p) => p.id !== id));
     } catch (error) {
-      alert((error as Error).message);
+      toast((error as Error).message || 'Failed to delete project', 'error');
     }
   };
 
@@ -108,8 +114,25 @@ export default function ProjectList() {
 
   if (loading) {
     return (
-      <div className="main-content">
-        <div className="empty-state">Loading...</div>
+      <div className="list-page">
+        <div className="list-page-inner">
+          <ListSkeleton count={4} />
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="list-page">
+        <div className="list-page-inner">
+          <div className="load-error">
+            <div className="load-error-icon">⚠️</div>
+            <h3>Something went wrong</h3>
+            <p>{loadError}</p>
+            <button className="btn btn-primary" onClick={loadData}>Retry</button>
+          </div>
+        </div>
       </div>
     );
   }
