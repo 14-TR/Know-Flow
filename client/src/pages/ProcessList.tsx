@@ -4,6 +4,8 @@ import { getProcesses, createProcess, deleteProcess, exportProcess, importProces
 import type { Process } from '../types';
 import Modal from '../components/Modal';
 import OnboardingBanner, { useOnboardingDismissed } from '../components/OnboardingBanner';
+import { useToast } from '../components/Toast';
+import { ListSkeleton } from '../components/LoadingSkeleton';
 
 export default function ProcessList() {
   const [processes, setProcesses] = useState<Process[]>([]);
@@ -15,6 +17,8 @@ export default function ProcessList() {
   const navigate = useNavigate();
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     loadProcesses();
@@ -24,8 +28,10 @@ export default function ProcessList() {
     try {
       const data = await getProcesses();
       setProcesses(data);
+      setLoadError(null);
     } catch (error) {
       console.error('Failed to load processes:', error);
+      setLoadError('Failed to load processes. Please refresh and try again.');
     } finally {
       setLoading(false);
     }
@@ -57,7 +63,7 @@ export default function ProcessList() {
       await deleteProcess(id);
       setProcesses(processes.filter((p) => p.id !== id));
     } catch (error) {
-      alert((error as Error).message);
+      toast((error as Error).message || 'Failed to delete process', 'error');
     }
   };
 
@@ -97,8 +103,25 @@ export default function ProcessList() {
 
   if (loading) {
     return (
-      <div className="main-content">
-        <div className="empty-state">Loading...</div>
+      <div className="list-page">
+        <div className="list-page-inner">
+          <ListSkeleton count={4} />
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="list-page">
+        <div className="list-page-inner">
+          <div className="load-error">
+            <div className="load-error-icon">⚠️</div>
+            <h3>Something went wrong</h3>
+            <p>{loadError}</p>
+            <button className="btn btn-primary" onClick={loadProcesses}>Retry</button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -108,20 +131,9 @@ export default function ProcessList() {
       <div className="list-page-inner">
         {!onboardingDismissed && <OnboardingBanner onDismiss={dismissOnboarding} />}
         {importError && (
-          <div style={{
-            background: 'var(--danger-dim)',
-            color: 'var(--danger)',
-            border: '1px solid rgba(248,113,113,0.2)',
-            borderRadius: 'var(--radius)',
-            padding: '0.75rem 1rem',
-            marginBottom: '1rem',
-            fontSize: '0.875rem',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}>
+          <div className="error-banner" style={{ marginBottom: '1rem' }}>
             {importError}
-            <button onClick={() => setImportError(null)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '1.1rem' }}>×</button>
+            <button onClick={() => setImportError(null)}>×</button>
           </div>
         )}
         <div className="list-page-header">
