@@ -1,391 +1,181 @@
-# Know-Flow
+# ProjectIQ
 
-An interactive, editable context graph (decision flow chart) for tracking processes and decisions across multiple projects. Includes Graph RAG capabilities for LLM/IDE integration.
+**AI-powered project intelligence dashboard.** Model and track complex processes as interactive knowledge graphs — with built-in Graph RAG for LLM/IDE integration.
+
+> Internal tool and portfolio piece. Private repo.
+
+---
+
+## What It Does
+
+ProjectIQ lets you define reusable process templates as directed graphs, then instantiate and track projects through those templates. Decisions are captured at each branch point, form data is collected per-node, and the full graph is queryable by LLMs via Graph RAG or MCP.
+
+**Think:** flowchart editor + project tracker + knowledge graph, in one Apple dark mode UI.
+
+---
 
 ## Features
 
-### Core Features
-- **Process Authoring**: Create and modify master process graphs with nodes (tasks, decisions, start/end points) and edges
-- **Visual Graph Editor**: Drag-and-drop interface using React Flow with zoom, pan, and grid snapping
-- **Editable Edges**: Draggable orthogonal edges with smooth rounded corners - click and drag any segment to reshape the path
-- **Project Tracking**: Instantiate projects from process templates and track progress through the workflow
-- **Decision Capture**: Record decision outcomes that determine the path through the process
-- **Form-based Data Entry**: Configure custom forms for each node to capture structured data
-- **Progress Visualization**: Color-coded nodes show status (not started, in progress, complete)
-- **Database Viewer**: Built-in page to inspect database records with auto-refresh
-- **Audit Trail**: Track edge traversals and decision history
+### Process Authoring
+- Visual drag-and-drop graph editor (React Flow)
+- Node types: `start`, `task`, `decision`, `end`
+- Draggable orthogonal edges with rounded corners
+- Form schema builder per node (capture structured data)
+- Export/import process templates as JSON
 
-### Graph RAG Features
-- **Graph Search**: Search nodes across all processes by title, description, or content
-- **Neighborhood Exploration**: Explore nodes and their connections up to N hops away
-- **Path Finding**: Find all paths between two nodes in a process
-- **Subgraph Extraction**: Extract downstream/upstream subgraphs from starting nodes
-- **Context Builder**: Build custom context from selected nodes for RAG pipelines
-- **Multiple Export Formats**: Export graphs as JSON, Markdown, Graphviz DOT, Mermaid, or LLM-optimized context
+### Project Tracking
+- Instantiate projects from process templates
+- Track node status: Not Started → In Progress → Complete
+- Capture decision outcomes at branch points
+- Full audit trail of edge traversals
+- Export/import project state as JSON
 
-### MCP Server (IDE Integration)
-- **Model Context Protocol**: Full MCP server for Claude/LLM integration
-- **8 Tools Available**: search_graph, get_process_context, get_node_neighborhood, find_paths, get_subgraph, list_processes, get_project_history, list_projects
-- **Resource Browsing**: Access processes and projects as MCP resources
+### Graph RAG
+- Full-text search across all process nodes
+- Neighborhood exploration (N hops)
+- Path finding between any two nodes
+- Subgraph extraction (upstream/downstream)
+- Context builder for RAG pipelines
+- Export formats: JSON, Markdown, Graphviz DOT, Mermaid, LLM-optimized context
+
+### MCP Server
+- 8 tools for Claude/LLM integration
+- Resource browsing for processes and projects
+- Drop-in config for Claude Desktop
+
+### UI Polish
+- Apple dark mode design system throughout
+- Toast notifications + loading skeletons
+- Onboarding banner for new users
+- Mobile-responsive header with hamburger nav
+- Rich demo seed data (Software Feature Development process)
+
+---
 
 ## Tech Stack
 
-- **Frontend**: React 18 + TypeScript + React Flow + Vite
-- **Backend**: Node.js + Express + TypeScript
-- **Database**: SQLite (via better-sqlite3)
-- **Containerization**: Docker + Docker Compose
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 18 + TypeScript + React Flow + Vite |
+| Backend | Node.js + Express + TypeScript |
+| Database | SQLite (better-sqlite3) |
+| MCP | Model Context Protocol server |
+| Containers | Docker + Docker Compose |
+
+---
 
 ## Quick Start
 
-### Option 1: Docker (Recommended)
-
-The fastest way to get started. Requires only Docker and Docker Compose.
+### Option 1: Docker
 
 ```bash
-# Clone the repository
-git clone https://github.com/14-TR/Know-Flow.git
-cd Know-Flow
-
-# Start all services
+git clone https://github.com/14-TR/Know-Flow.git projectiq
+cd projectiq
 docker-compose up --build
-
-# Open in browser
-# Frontend: http://localhost:5173
-# API: http://localhost:3001/api
 ```
 
-That's it! The database is automatically created and seeded with sample data.
+- Frontend: http://localhost:5173
+- API: http://localhost:3001/api
 
 ### Option 2: Local Development
 
-For development without Docker. Requires Node.js 18+ and npm.
-
-**1. Start the Backend**
 ```bash
-cd api
-npm install
-npm run dev
-# API running at http://localhost:3001
+# Backend
+cd api && npm install && npm run dev
+# → http://localhost:3001
+
+# Frontend (new terminal)
+cd client && npm install && npm run dev
+# → http://localhost:5173
 ```
 
-**2. Start the Frontend** (in a new terminal)
-```bash
-cd client
-npm install
-npm run dev
-# Frontend running at http://localhost:5173
-```
-
-### Verify Installation
-
-Once running, you should be able to:
-
-1. **View the Process List**: Open http://localhost:5173 - you'll see the sample "Property Development Process"
-2. **Open the Graph Editor**: Click on the process to view and edit the interactive flowchart
-3. **Explore the Graph RAG UI**: Navigate to http://localhost:5173/explorer to search and explore nodes
-4. **Check the API**: Visit http://localhost:3001/api/processes to see the JSON response
-5. **Inspect the Database**: Go to http://localhost:5173/database to view all tables
-
-### First Steps
-
-After installation, try these to get familiar with Know-Flow:
-
-1. **Edit a Process**: Click on "Property Development Process", then drag nodes around or double-click to edit
-2. **Create a Project**: Use the "New Project" button to create a tracking instance from the process template
-3. **Track Progress**: In a project, click nodes to update their status (Not Started → In Progress → Complete)
-4. **Search with Graph RAG**: Go to `/explorer` and search for "approval" to find related nodes
-5. **Export a Graph**: In the Graph Explorer, export your process as Markdown or Mermaid diagrams
-
-### Prerequisites
-
-| Requirement | Docker Setup | Local Setup |
-|-------------|--------------|-------------|
-| Docker | Required | Not needed |
-| Docker Compose | Required | Not needed |
-| Node.js | Not needed | 18+ required |
-| npm | Not needed | Required |
-
-### Ports Used
-
-| Service | Port | URL |
-|---------|------|-----|
-| Frontend | 5173 | http://localhost:5173 |
-| Backend API | 3001 | http://localhost:3001/api |
-
-### Data Persistence
-
-- **Docker**: Data is stored in a Docker volume (`api_data`)
-- **Local**: Database is created at `api/data/knowflow.db`
-
-The SQLite database is automatically initialized with schema and sample data on first run.
+---
 
 ## Project Structure
 
 ```
-Know-Flow/
-├── api/                    # Backend API
+projectiq/
+├── api/                    # Express + TypeScript backend
 │   ├── src/
-│   │   ├── routes/         # Express route handlers
-│   │   │   └── graphRag.ts # Graph RAG API endpoints
-│   │   ├── utils/          # Database connection
-│   │   └── index.ts        # Entry point
-│   ├── Dockerfile
-│   ├── package.json
-│   └── tsconfig.json
-├── client/                 # Frontend application
+│   │   ├── routes/         # REST endpoints
+│   │   │   └── graphRag.ts # Graph RAG API
+│   │   ├── utils/          # DB connection
+│   │   └── index.ts
+│   └── ...
+├── client/                 # React + Vite frontend
 │   ├── src/
-│   │   ├── components/     # React components
-│   │   ├── pages/          # Page components
-│   │   │   └── GraphExplorer.tsx  # Graph RAG UI
+│   │   ├── components/     # Shared UI components
+│   │   ├── pages/          # Route-level pages
 │   │   ├── services/       # API client
-│   │   ├── styles/         # CSS styles
-│   │   └── types/          # TypeScript types
-│   ├── Dockerfile
-│   ├── package.json
-│   └── vite.config.ts
-├── mcp-server/             # MCP Server for LLM integration
-│   ├── src/
-│   │   └── index.ts        # MCP server implementation
-│   ├── package.json
-│   └── tsconfig.json
-├── database/               # Database schema and seeds
-│   ├── schema.sql          # SQLite schema
-│   └── seed.sqlite.sql     # Sample data
-└── docker-compose.yml      # Container orchestration
+│   │   └── styles/         # Global CSS design system
+│   └── ...
+├── mcp-server/             # MCP server for LLM integration
+│   └── ...
+├── database/               # SQLite schema + seed data
+│   ├── schema.sql
+│   └── seed.sqlite.sql
+└── docker-compose.yml
 ```
 
-## Database Schema
+---
 
-### Core Tables
-
-- **processes**: Master process templates (id, name, description, version)
-- **nodes**: Graph nodes (id, process_id, type, title, description, form_schema, position)
-- **edges**: Connections between nodes (id, process_id, source_node_id, target_node_id, label, condition, waypoints)
-- **projects**: Project instances (id, name, process_id, status)
-- **project_node_statuses**: Per-project node status tracking (status, decision_result, form_data)
-- **project_edge_traversals**: Audit trail of traversed edges
-
-### Node Types
-
-- `start`: Entry point of a process
-- `task`: Work item or action
-- `decision`: Decision point with multiple outgoing edges
-- `end`: Terminal point of a process
-
-## API Endpoints
+## API Reference
 
 ### Processes
-- `GET /api/processes` - List all processes
-- `GET /api/processes/:id` - Get process with nodes and edges
-- `POST /api/processes` - Create new process
-- `PUT /api/processes/:id` - Update process
-- `DELETE /api/processes/:id` - Delete process
-
-### Nodes
-- `GET /api/nodes` - List nodes (filter by process_id)
-- `POST /api/nodes` - Create node
-- `PUT /api/nodes/:id` - Update node
-- `PATCH /api/nodes/:id/position` - Update node position
-- `DELETE /api/nodes/:id` - Delete node
-
-### Edges
-- `GET /api/edges` - List edges (filter by process_id)
-- `POST /api/edges` - Create edge
-- `PUT /api/edges/:id` - Update edge
-- `PATCH /api/edges/:id/waypoints` - Update edge waypoints (for dragging)
-- `DELETE /api/edges/:id` - Delete edge
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/processes` | List all processes |
+| GET | `/api/processes/:id` | Get process + graph |
+| POST | `/api/processes` | Create process |
+| PUT | `/api/processes/:id` | Update process |
+| DELETE | `/api/processes/:id` | Delete process |
+| POST | `/api/processes/:id/export` | Export as JSON |
+| POST | `/api/processes/import` | Import from JSON |
 
 ### Projects
-- `GET /api/projects` - List all projects
-- `GET /api/projects/:id` - Get project with full status
-- `POST /api/projects` - Create project from process
-- `PUT /api/projects/:id` - Update project
-- `DELETE /api/projects/:id` - Delete project
-
-### Project Node Statuses
-- `GET /api/project-node-statuses` - List statuses for a project
-- `PUT /api/project-node-statuses/:id` - Update node status
-
-### Debug
-- `GET /api/debug/tables` - Get all table names with row counts
-- `GET /api/debug/tables/:table` - Get contents of a specific table
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/projects` | List all projects |
+| GET | `/api/projects/:id` | Get project + status |
+| POST | `/api/projects` | Create from template |
+| PUT | `/api/projects/:id` | Update project |
+| DELETE | `/api/projects/:id` | Delete project |
+| POST | `/api/projects/:id/export` | Export as JSON |
+| POST | `/api/projects/import` | Import from JSON |
 
 ### Graph RAG
-- `GET /api/graph/search?q=query` - Search nodes by title/description
-- `GET /api/graph/process/:id/context` - Get full process context
-- `GET /api/graph/node/:id/neighborhood?depth=2` - Get node and neighbors
-- `GET /api/graph/node/:id/paths-to/:targetId` - Find paths between nodes
-- `GET /api/graph/process/:id/subgraph?start_nodes=id1,id2&direction=downstream` - Extract subgraph
-- `POST /api/graph/context/build` - Build custom context from node IDs
-- `GET /api/graph/processes/summary` - Get summary of all processes
-- `GET /api/graph/project/:id/history` - Get project execution history
-- `GET /api/graph/export/process/:id?format=markdown` - Export process (json, markdown, dot, mermaid, llm-context)
-- `GET /api/graph/export/project/:id?format=markdown` - Export project (json, markdown, llm-context)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/graph/search` | Search nodes by text |
+| GET | `/api/graph/process/:id/context` | Full process context |
+| GET | `/api/graph/node/:id/neighborhood` | Node + N-hop neighbors |
+| GET | `/api/graph/node/:id/paths-to/:targetId` | Paths between nodes |
+| GET | `/api/graph/process/:id/subgraph` | Extract subgraph |
+| POST | `/api/graph/context/build` | Custom context from node IDs |
+| GET | `/api/graph/processes/summary` | Process stats |
+| GET | `/api/graph/project/:id/history` | Execution history |
+| GET | `/api/graph/export/process/:id` | Export (json/md/dot/mermaid/llm-context) |
 
-## Development
+---
 
-### Available Scripts
+## MCP Server
 
-**Backend (api/)**
-```bash
-npm run dev      # Start development server with hot reload
-npm run build    # Compile TypeScript to dist/
-npm run start    # Run compiled production build
-npm run typecheck # Run TypeScript type checking
-```
-
-**Frontend (client/)**
-```bash
-npm run dev      # Start Vite dev server with HMR
-npm run build    # Build for production
-npm run preview  # Preview production build
-npm run typecheck # Run TypeScript type checking
-```
-
-**MCP Server (mcp-server/)**
-```bash
-npm run dev      # Run with tsx for development
-npm run build    # Compile TypeScript
-npm run start    # Run compiled server
-```
-
-### Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | 3001 | Backend API port |
-| `DATA_DIR` | `./data` | Local directory for user's projects |
-| `ADMIN_DATA_DIR` | `DATA_DIR/admin` | Path to admin templates (can be network share) |
-| `KNOWFLOW_USER` | `admin` | Username (use `admin` for template editing) |
-| `NODE_ENV` | development | Environment mode |
-| `VITE_API_URL` | `http://localhost:3001/api` | API URL for frontend |
-
-## Team Deployment (Shared Network Drive)
-
-Share Know-Flow across your organization. Admin creates process templates on a network share, users run locally and access those templates read-only.
-
-### Architecture
-
-```
-Network Share
-└── admin/
-    └── knowflow.db              # Shared templates (read-only for users)
-
-User's Local Machine
-└── data/
-    └── knowflow.db              # User's local projects
-```
-
-Network share paths by OS:
-- **Windows**: `\\SERVER\KnowFlow\admin` or `Z:\KnowFlow\admin`
-- **Mac**: `/Volumes/KnowFlow/admin`
-- **Linux**: `/mnt/shared/knowflow/admin`
-
-### Admin Setup
-
-Admin runs Know-Flow pointed at the network share:
-
-```cmd
-:: Windows
-set DATA_DIR=Z:\KnowFlow
-set KNOWFLOW_USER=admin
-docker-compose up --build
-```
+Connect ProjectIQ to Claude or any MCP-compatible LLM:
 
 ```bash
-# Linux/Mac
-DATA_DIR=/mnt/shared/knowflow KNOWFLOW_USER=admin docker-compose up --build
+cd mcp-server && npm install && npm run build
 ```
 
-### User Setup
-
-Users just need Docker Desktop installed. IT can distribute these files:
-
-1. **Copy to user's machine:**
-   - `docker-compose.user.yml`
-   - `.env.user.example` → rename to `.env`
-   - `start-knowflow.bat` (Windows) or `start-knowflow.sh` (Mac/Linux)
-
-2. **Edit `.env`** with user's name and network path:
-   ```bash
-   KNOWFLOW_USER=alice
-
-   # Windows (UNC path)
-   ADMIN_SHARE_PATH=//SERVER/KnowFlow/admin
-
-   # Mac (SMB mount)
-   ADMIN_SHARE_PATH=/Volumes/KnowFlow/admin
-
-   # Linux
-   ADMIN_SHARE_PATH=/mnt/shared/knowflow/admin
-   ```
-
-3. **Launch:**
-   - **Windows**: Double-click `start-knowflow.bat`
-   - **Mac/Linux**: Run `./start-knowflow.sh`
-
-Users open http://localhost:5173 and see the shared templates.
-
-### Permissions
-
-| User | Process Templates | Projects |
-|------|------------------|----------|
-| `admin` | Read + Write | Read + Write |
-| Others | Read-only | Read + Write (local) |
-
-### How It Works
-
-- Admin's templates live on the network share
-- Users mount that share read-only via `ADMIN_DATA_DIR`
-- User projects are stored locally (fast writes, no network latency)
-- SQLite ATTACH connects user's DB to admin's templates
-- `/api/whoami` shows current user and permissions
-
-### Resetting the Database
-
-To reset the database to initial seed data:
-
-```bash
-# Docker
-docker-compose down -v
-docker-compose up --build
-
-# Local
-rm api/data/knowflow.db
-npm run dev  # in api/
-```
-
-## Sample Data
-
-The seed data includes a "Property Development Process" with:
-- 16 nodes representing steps from project initiation to certificate of occupancy
-- Decision points for annexation, zoning, site plan approval, permits, and inspections
-- A sample project "Oak Street Development" with initial progress
-
-## MCP Server Setup
-
-The Know-Flow MCP server enables LLMs like Claude to interact directly with your knowledge graphs.
-
-### Installation
-
-```bash
-cd mcp-server
-npm install
-npm run build
-```
-
-### Configuration for Claude Desktop
-
-Add to your Claude Desktop config (`~/.claude/claude_desktop_config.json`):
+Add to `~/.claude/claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
-    "knowflow": {
+    "projectiq": {
       "command": "node",
-      "args": ["/path/to/Know-Flow/mcp-server/dist/index.js"],
+      "args": ["/path/to/projectiq/mcp-server/dist/index.js"],
       "env": {
-        "KNOWFLOW_DB_PATH": "/path/to/Know-Flow/api/data/knowflow.db"
+        "KNOWFLOW_DB_PATH": "/path/to/projectiq/api/data/knowflow.db"
       }
     }
   }
@@ -396,35 +186,111 @@ Add to your Claude Desktop config (`~/.claude/claude_desktop_config.json`):
 
 | Tool | Description |
 |------|-------------|
-| `search_graph` | Search nodes by title, description, or content |
-| `get_process_context` | Get full context of a process graph |
-| `get_node_neighborhood` | Explore connected nodes up to N hops |
-| `find_paths` | Find all paths between two nodes |
+| `search_graph` | Search nodes by title/description |
+| `get_process_context` | Full context of a process |
+| `get_node_neighborhood` | Connected nodes up to N hops |
+| `find_paths` | All paths between two nodes |
 | `get_subgraph` | Extract subgraph from starting nodes |
-| `list_processes` | List all available processes |
-| `get_project_history` | Get project execution history and decisions |
+| `list_processes` | List all processes |
+| `get_project_history` | Project execution history + decisions |
 | `list_projects` | List all project instances |
 
-### Example Usage in Claude
+---
 
-Once configured, you can ask Claude things like:
-- "Search for nodes related to 'approval' in the knowledge graph"
-- "Show me the full context of the Property Development process"
-- "Find all paths from the Start node to the Certificate of Occupancy"
-- "What decisions were made in the Oak Street Development project?"
+## Team Deployment
 
-## Graph Explorer UI
+Share process templates across a team via a network share. Admin writes templates; users access them read-only.
 
-Access the Graph Explorer at http://localhost:5173/explorer to:
-- Search across all process nodes
-- Explore node neighborhoods visually
-- Find paths between nodes
-- Build custom contexts for RAG
-- Export graphs in multiple formats
+```
+Network Share
+└── admin/
+    └── knowflow.db        # Shared templates (read-only)
+
+User Machine
+└── data/
+    └── knowflow.db        # Local projects
+```
+
+Set environment variables:
+
+```bash
+# Admin
+DATA_DIR=/mnt/shared/projectiq KNOWFLOW_USER=admin docker-compose up --build
+
+# User .env
+KNOWFLOW_USER=alice
+ADMIN_SHARE_PATH=/mnt/shared/projectiq/admin
+```
+
+Network share paths:
+- **Windows**: `\\SERVER\ProjectIQ\admin`
+- **Mac**: `/Volumes/ProjectIQ/admin`
+- **Linux**: `/mnt/shared/projectiq/admin`
+
+---
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | 3001 | Backend API port |
+| `DATA_DIR` | `./data` | User data directory |
+| `ADMIN_DATA_DIR` | `DATA_DIR/admin` | Shared templates path |
+| `KNOWFLOW_USER` | `admin` | Username (admin = template edit) |
+| `NODE_ENV` | development | Environment mode |
+| `VITE_API_URL` | `http://localhost:3001/api` | API URL for frontend |
+
+---
+
+## Development
+
+```bash
+# Backend
+cd api
+npm run dev          # Dev server with hot reload
+npm run build        # Compile TypeScript
+npm run typecheck    # Type check only
+
+# Frontend
+cd client
+npm run dev          # Vite dev server
+npm run build        # Production build
+npm run typecheck    # Type check only
+
+# MCP Server
+cd mcp-server
+npm run dev          # tsx dev mode
+npm run build        # Compile TypeScript
+```
+
+---
+
+## Database Schema
+
+| Table | Purpose |
+|-------|---------|
+| `processes` | Process templates |
+| `nodes` | Graph nodes per process |
+| `edges` | Connections between nodes |
+| `projects` | Project instances |
+| `project_node_statuses` | Per-project node tracking |
+| `project_edge_traversals` | Audit trail |
+
+Reset the database:
+
+```bash
+# Docker
+docker-compose down -v && docker-compose up --build
+
+# Local
+rm api/data/knowflow.db && npm run dev  # in api/
+```
+
+---
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for release notes and version history.
+See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## License
 
