@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Routes, Route, Link, useLocation } from 'react-router-dom';
+import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import ProcessEditor from './pages/ProcessEditor';
 import ProjectTracker from './pages/ProjectTracker';
 import ProcessList from './pages/ProcessList';
@@ -8,9 +8,13 @@ import ProjectList from './pages/ProjectList';
 import DatabaseViewer from './pages/DatabaseViewer';
 import { GraphExplorer } from './pages/GraphExplorer';
 
+import { useKeyboardShortcuts, useSequenceShortcuts } from './hooks/useKeyboardShortcuts';
+import KeyboardShortcutsModal from './components/KeyboardShortcutsModal';
+
 export default function App() {
   const location = useLocation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [showShortcuts, setShowShortcutsModal] = useState(false);
 
   // Close mobile nav on route change
   useEffect(() => {
@@ -25,6 +29,23 @@ export default function App() {
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
   }, []);
+
+  // Global keyboard shortcuts
+  useKeyboardShortcuts([
+    {
+      key: '?',
+      description: 'Show keyboard shortcuts',
+      group: 'General',
+      handler: () => setShowShortcutsModal(true),
+    },
+  ]);
+
+  const navigate = useNavigate();
+  useSequenceShortcuts([
+    { keys: ['g', 'p'], description: 'Go to Processes', group: 'Navigation', handler: () => navigate('/') },
+    { keys: ['g', 'j'], description: 'Go to Projects', group: 'Navigation', handler: () => navigate('/projects') },
+    { keys: ['g', 'e'], description: 'Go to Explorer', group: 'Navigation', handler: () => navigate('/explorer') },
+  ]);
 
   const navLinks = [
     { to: '/', label: 'Processes', match: (p: string) => p === '/' },
@@ -47,6 +68,19 @@ export default function App() {
             </Link>
           ))}
         </nav>
+
+        {/* Shortcuts hint */}
+        <button
+          className="shortcuts-hint-btn"
+          onClick={() => setShowShortcutsModal(true)}
+          title="Keyboard shortcuts (?)"
+          aria-label="Keyboard shortcuts"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="6" width="20" height="12" rx="2"/>
+            <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/>
+          </svg>
+        </button>
 
         {/* Mobile hamburger */}
         <button
@@ -86,6 +120,9 @@ export default function App() {
         <Route path="/explorer" element={<GraphExplorer />} />
       </Routes>
     </div>
+      {showShortcuts && (
+        <KeyboardShortcutsModal onClose={() => setShowShortcutsModal(false)} />
+      )}
     </ToastProvider>
   );
 }
