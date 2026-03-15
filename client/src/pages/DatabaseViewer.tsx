@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import './DatabaseViewer.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
@@ -13,6 +14,29 @@ interface TableData {
   total: number;
   limit: number;
   offset: number;
+}
+
+// Classify a cell value for styling
+function getCellClass(col: string, value: unknown): string {
+  if (value === null || value === undefined) return 'db-cell-null';
+  if (col === 'id' || col.endsWith('_id')) return 'db-cell-id';
+  if (typeof value === 'boolean') return value ? 'db-cell-bool-true' : 'db-cell-bool-false';
+  if (typeof value === 'number') return 'db-cell-number';
+  const str = String(value);
+  if (str.startsWith('{') || str.startsWith('[')) return 'db-cell-json';
+  return '';
+}
+
+function formatValue(value: unknown): string {
+  if (value === null || value === undefined) return 'NULL';
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+}
+
+function truncateValue(value: string, maxLength = 60): string {
+  if (value.length <= maxLength) return value;
+  return value.substring(0, maxLength) + '…';
 }
 
 export default function DatabaseViewer() {
@@ -52,38 +76,32 @@ export default function DatabaseViewer() {
 
   useEffect(() => {
     if (!autoRefresh) return;
-
     const interval = setInterval(() => {
       fetchTableCounts();
       fetchTableData(selectedTable);
     }, 2000);
-
     return () => clearInterval(interval);
   }, [autoRefresh, selectedTable, fetchTableCounts, fetchTableData]);
 
-  const formatValue = (value: unknown): string => {
-    if (value === null || value === undefined) return 'NULL';
-    if (typeof value === 'object') return JSON.stringify(value);
-    return String(value);
-  };
-
-  const truncateValue = (value: string, maxLength: number = 50): string => {
-    if (value.length <= maxLength) return value;
-    return value.substring(0, maxLength) + '...';
-  };
+  const columns = tableData?.rows.length ? Object.keys(tableData.rows[0]) : [];
 
   return (
-    <div className="main-content" style={{ padding: '1rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h1 style={{ margin: 0 }}>Database Viewer</h1>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+    <div className="db-viewer">
+
+      {/* Header */}
+      <div className="db-header">
+        <div className="db-header-left">
+          <h1>Database</h1>
+          <p>Inspect raw SQLite tables — read-only view</p>
+        </div>
+        <div className="db-header-actions">
+          <label className="db-auto-refresh-label">
             <input
               type="checkbox"
               checked={autoRefresh}
               onChange={(e) => setAutoRefresh(e.target.checked)}
             />
-            Auto-refresh (2s)
+            Auto-refresh
           </label>
           <button
             className="btn btn-secondary btn-sm"
@@ -92,99 +110,103 @@ export default function DatabaseViewer() {
               fetchTableData(selectedTable);
             }}
           >
-            Refresh
+            ↻ Refresh
           </button>
-          <Link to="/" className="btn btn-primary btn-sm">
-            Back to Home
+          <Link to="/" className="btn btn-secondary btn-sm">
+            ← Back
           </Link>
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+      {/* Table tabs */}
+      <div className="db-tabs">
         {Object.entries(tableCounts).map(([table, count]) => (
           <button
             key={table}
-            className={`btn btn-sm ${selectedTable === table ? 'btn-primary' : 'btn-secondary'}`}
+            className={`db-tab${selectedTable === table ? ' active' : ''}`}
             onClick={() => setSelectedTable(table)}
-            style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}
           >
             {table}
-            <span style={{
-              background: selectedTable === table ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
-              padding: '0.125rem 0.375rem',
-              borderRadius: '10px',
-              fontSize: '0.75rem',
-            }}>
-              {count}
-            </span>
+            <span className="db-tab-count">{count}</span>
           </button>
         ))}
       </div>
 
-      {loading && !tableData ? (
-        <div className="empty-state">Loading...</div>
-      ) : tableData ? (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{
-            width: '100%',
-            borderCollapse: 'collapse',
-            fontSize: '0.875rem',
-            background: 'white',
-            border: '1px solid #ddd',
-          }}>
-            <thead>
-              <tr style={{ background: '#f5f5f5' }}>
-                {tableData.rows.length > 0 &&
-                  Object.keys(tableData.rows[0]).map((col) => (
-                    <th
-                      key={col}
-                      style={{
-                        padding: '0.5rem',
-                        textAlign: 'left',
-                        borderBottom: '2px solid #ddd',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {col}
-                    </th>
-                  ))}
-              </tr>
-            </thead>
-            <tbody>
-              {tableData.rows.length === 0 ? (
-                <tr>
-                  <td colSpan={100} style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
-                    No records in this table
-                  </td>
-                </tr>
-              ) : (
-                tableData.rows.map((row, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
-                    {Object.values(row).map((value, colIdx) => (
-                      <td
-                        key={colIdx}
-                        style={{
-                          padding: '0.5rem',
-                          maxWidth: '300px',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                        title={formatValue(value)}
-                      >
-                        {truncateValue(formatValue(value))}
-                      </td>
+      {/* Content */}
+      <div className="db-content">
+        {tableData && (
+          <div className="db-table-toolbar">
+            <span className="db-table-name">{tableData.table}</span>
+            <span className="db-row-count">
+              {loading ? 'Loading…' : `${tableData.rows.length} of ${tableData.total} rows`}
+            </span>
+          </div>
+        )}
+
+        {loading && !tableData ? (
+          <div className="empty-state">
+            <p>Loading…</p>
+          </div>
+        ) : tableData ? (
+          <>
+            <div className="db-table-wrapper">
+              <table className="db-table">
+                <thead>
+                  <tr>
+                    {columns.map((col) => (
+                      <th key={col}>{col}</th>
                     ))}
                   </tr>
-                ))
+                </thead>
+                <tbody>
+                  {tableData.rows.length === 0 ? (
+                    <tr className="db-empty-row">
+                      <td colSpan={columns.length || 1}>No records in this table</td>
+                    </tr>
+                  ) : (
+                    tableData.rows.map((row, idx) => (
+                      <tr key={idx}>
+                        {columns.map((col) => {
+                          const value = row[col];
+                          const formatted = formatValue(value);
+                          const cellClass = getCellClass(col, value);
+                          return (
+                            <td
+                              key={col}
+                              className={cellClass}
+                              title={formatted}
+                            >
+                              {truncateValue(formatted)}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="db-footer">
+              <span>{tableData.table}</span>
+              <span className="db-footer-dot">·</span>
+              <span>{tableData.rows.length} of {tableData.total} rows</span>
+              {tableData.total > tableData.limit && (
+                <>
+                  <span className="db-footer-dot">·</span>
+                  <span>showing first {tableData.limit}</span>
+                </>
               )}
-            </tbody>
-          </table>
-          <div style={{ marginTop: '0.5rem', color: '#666', fontSize: '0.875rem' }}>
-            Showing {tableData.rows.length} of {tableData.total} records
-          </div>
-        </div>
-      ) : null}
+              {autoRefresh && (
+                <>
+                  <span className="db-footer-dot">·</span>
+                  <span style={{ color: 'var(--success)' }}>● live</span>
+                </>
+              )}
+            </div>
+          </>
+        ) : null}
+      </div>
     </div>
   );
 }
