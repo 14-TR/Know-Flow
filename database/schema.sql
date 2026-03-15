@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS processes (
 CREATE TABLE IF NOT EXISTS nodes (
     id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(hex(randomblob(2)),2) || '-' || hex(randomblob(6)))),
     process_id TEXT NOT NULL REFERENCES processes(id) ON DELETE CASCADE,
-    type TEXT NOT NULL CHECK (type IN ('start', 'task', 'decision', 'end')),
+    type TEXT NOT NULL CHECK (type IN ('start', 'task', 'decision', 'end', 'milestone')),
     title TEXT NOT NULL,
     description TEXT,
     form_schema TEXT DEFAULT '{}',
@@ -72,6 +72,9 @@ CREATE TABLE IF NOT EXISTS project_node_statuses (
     notes TEXT,
     started_at DATETIME,
     completed_at DATETIME,
+    due_date TEXT,
+    estimated_days INTEGER,
+    date_pinned INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(project_id, node_id)
