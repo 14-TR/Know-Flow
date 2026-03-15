@@ -7,6 +7,7 @@ import { ToastProvider } from './components/Toast';
 import ProjectList from './pages/ProjectList';
 import DatabaseViewer from './pages/DatabaseViewer';
 import { GraphExplorer } from './pages/GraphExplorer';
+import Calendar from './pages/Calendar';
 
 import { useKeyboardShortcuts, useSequenceShortcuts } from './hooks/useKeyboardShortcuts';
 import KeyboardShortcutsModal from './components/KeyboardShortcutsModal';
@@ -116,6 +117,7 @@ export default function App() {
         <Route path="/process/:id" element={<ProcessEditor />} />
         <Route path="/projects" element={<ProjectList />} />
         <Route path="/project/:id" element={<ProjectTracker />} />
+        <Route path="/project/:id/calendar" element={<Calendar />} />
         <Route path="/database" element={<DatabaseViewer />} />
         <Route path="/explorer" element={<GraphExplorer />} />
       </Routes>
