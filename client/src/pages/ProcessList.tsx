@@ -6,6 +6,7 @@ import Modal from '../components/Modal';
 import OnboardingBanner, { useOnboardingDismissed } from '../components/OnboardingBanner';
 import { useToast } from '../components/Toast';
 import { ListSkeleton } from '../components/LoadingSkeleton';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 export default function ProcessList() {
   const [processes, setProcesses] = useState<Process[]>([]);
@@ -19,6 +20,16 @@ export default function ProcessList() {
   const [importError, setImportError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Keyboard shortcut: 'n' → new process
+  useKeyboardShortcuts([
+    {
+      key: 'n',
+      description: 'New process',
+      group: 'Actions',
+      handler: () => setShowModal(true),
+    },
+  ]);
 
   useEffect(() => {
     loadProcesses();

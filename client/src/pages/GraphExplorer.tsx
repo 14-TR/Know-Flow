@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   searchGraph,
@@ -14,6 +14,7 @@ import {
 } from '../services/api';
 import type { ProcessNode } from '../types';
 import './GraphExplorer.css';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 type ViewMode = 'search' | 'processes' | 'neighborhood' | 'paths' | 'context';
 
@@ -52,6 +53,22 @@ export function GraphExplorer() {
   const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
   const [contextResult, setContextResult] = useState<ContextBuildResult | null>(null);
   const [contextFormat, setContextFormat] = useState<'markdown' | 'text'>('markdown');
+
+  // Ref for the search input to enable '/' shortcut
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Keyboard shortcut: '/' → focus search
+  useKeyboardShortcuts([
+    {
+      key: '/',
+      description: 'Focus search',
+      group: 'Actions',
+      handler: () => {
+        setViewMode('search');
+        setTimeout(() => searchInputRef.current?.focus(), 50);
+      },
+    },
+  ]);
 
   // Load processes on mount
   useEffect(() => {
@@ -255,6 +272,7 @@ export function GraphExplorer() {
             <div className="search-bar">
               <input
                 type="text"
+                ref={searchInputRef}
                 placeholder="Search nodes by title, description, or content..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}

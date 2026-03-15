@@ -1,8 +1,17 @@
 # Changelog
 
-All notable changes to Know-Flow are documented in this file.
+All notable changes to ProjectIQ are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+---
+
+## [Unreleased]
+
+### Changed
+- Rebranded README from Know-Flow to ProjectIQ
+- Updated feature documentation to reflect current state (dark mode, onboarding, export/import, error handling)
+- Restructured README for demo/interview readability
 
 ---
 

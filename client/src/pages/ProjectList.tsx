@@ -5,6 +5,7 @@ import type { Project, Process } from '../types';
 import Modal from '../components/Modal';
 import { useToast } from '../components/Toast';
 import { ListSkeleton } from '../components/LoadingSkeleton';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 export default function ProjectList() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -18,6 +19,18 @@ export default function ProjectList() {
   const [importError, setImportError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Keyboard shortcut: 'n' → new project (only when processes exist)
+  useKeyboardShortcuts([
+    {
+      key: 'n',
+      description: 'New project',
+      group: 'Actions',
+      handler: () => {
+        if (processes.length > 0) setShowModal(true);
+      },
+    },
+  ]);
 
   useEffect(() => {
     loadData();
