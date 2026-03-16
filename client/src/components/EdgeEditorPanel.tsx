@@ -50,9 +50,7 @@ export default function EdgeEditorPanel({ edge, onUpdate, onDelete, onClose }: P
             onChange={(e) => setLabel(e.target.value)}
             placeholder='e.g., "Yes" or "No"'
           />
-          <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-            This label appears on the edge and is used for decision routing.
-          </p>
+          <p className="eep-hint">This label appears on the edge and is used for decision routing.</p>
         </div>
 
         <div className="form-group">
@@ -62,7 +60,6 @@ export default function EdgeEditorPanel({ edge, onUpdate, onDelete, onClose }: P
             value={conditionField}
             onChange={(e) => setConditionField(e.target.value)}
             placeholder="Field name"
-            style={{ marginBottom: '0.25rem' }}
           />
           <input
             type="text"
@@ -70,12 +67,10 @@ export default function EdgeEditorPanel({ edge, onUpdate, onDelete, onClose }: P
             onChange={(e) => setConditionValue(e.target.value)}
             placeholder="Expected value"
           />
-          <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-            When the source node's form field matches this value, this edge is traversed.
-          </p>
+          <p className="eep-hint">When the source node's form field matches this value, this edge is traversed.</p>
         </div>
 
-        <div className="form-actions" style={{ justifyContent: 'space-between' }}>
+        <div className="panel-form-actions">
           <button className="btn btn-danger btn-sm" onClick={onDelete}>
             Delete Edge
           </button>
