@@ -88,29 +88,20 @@ export default function NodeEditorPanel({ node, onUpdate, onDelete, onClose }: P
         </div>
 
         <div className="form-group">
-          <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            Form Fields
+          <div className="nep-fields-header">
+            <span className="nep-fields-label">Form Fields</span>
             <button className="btn btn-sm btn-secondary" onClick={addFormField}>
               + Add Field
             </button>
-          </label>
+          </div>
           {formFields.map((field, index) => (
-            <div
-              key={index}
-              style={{
-                background: 'var(--bg-elevated)',
-                padding: '0.5rem',
-                borderRadius: 4,
-                marginTop: '0.5rem',
-              }}
-            >
-              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.25rem' }}>
+            <div key={index} className="nep-field-card">
+              <div className="nep-field-row">
                 <input
                   type="text"
                   placeholder="Field name"
                   value={field.name}
                   onChange={(e) => updateFormField(index, { name: e.target.value })}
-                  style={{ flex: 1 }}
                 />
                 <button
                   className="btn btn-danger btn-sm btn-icon"
@@ -119,20 +110,19 @@ export default function NodeEditorPanel({ node, onUpdate, onDelete, onClose }: P
                   ✕
                 </button>
               </div>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <div className="nep-field-meta">
                 <input
                   type="text"
                   placeholder="Label"
                   value={field.label}
                   onChange={(e) => updateFormField(index, { label: e.target.value })}
-                  style={{ flex: 1 }}
                 />
                 <select
+                  className="nep-type-select"
                   value={field.type}
                   onChange={(e) =>
                     updateFormField(index, { type: e.target.value as FormField['type'] })
                   }
-                  style={{ width: 80 }}
                 >
                   <option value="text">Text</option>
                   <option value="number">Number</option>
@@ -144,6 +134,7 @@ export default function NodeEditorPanel({ node, onUpdate, onDelete, onClose }: P
               {field.type === 'select' && (
                 <input
                   type="text"
+                  className="nep-options-input"
                   placeholder="Options (comma-separated)"
                   value={field.options?.join(', ') || ''}
                   onChange={(e) =>
@@ -151,14 +142,13 @@ export default function NodeEditorPanel({ node, onUpdate, onDelete, onClose }: P
                       options: e.target.value.split(',').map((s) => s.trim()),
                     })
                   }
-                  style={{ marginTop: '0.25rem', width: '100%' }}
                 />
               )}
             </div>
           ))}
         </div>
 
-        <div className="form-actions" style={{ justifyContent: 'space-between' }}>
+        <div className="panel-form-actions">
           <button className="btn btn-danger btn-sm" onClick={onDelete}>
             Delete Node
           </button>

@@ -19,6 +19,7 @@ import {
   Panel,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import './ProcessEditor.css';
 
 import {
   getProcess,
@@ -505,31 +506,28 @@ function ProcessEditorInner() {
               >
                 &larr; Back
               </button>
-              <span style={{ padding: '0.25rem 0.5rem', fontWeight: 500 }}>
-                {process.name}
-              </span>
-              <div style={{ borderLeft: '1px solid var(--border)', height: 24, margin: '0 0.5rem' }} />
+              <span className="toolbar-process-name">{process.name}</span>
+              <div className="toolbar-divider" />
               <button
-                className="btn btn-success btn-sm"
+                className="btn btn-sm btn-node-start"
                 onClick={() => handleAddNode('start')}
               >
                 + Start
               </button>
               <button
-                className="btn btn-primary btn-sm"
+                className="btn btn-sm btn-node-task"
                 onClick={() => handleAddNode('task')}
               >
                 + Task
               </button>
               <button
-                className="btn btn-sm"
-                style={{ background: 'var(--warning-dim)', color: 'var(--warning)', border: '1px solid var(--warning)' }}
+                className="btn btn-sm btn-node-decision"
                 onClick={() => handleAddNode('decision')}
               >
                 + Decision
               </button>
               <button
-                className="btn btn-danger btn-sm"
+                className="btn btn-sm btn-node-end"
                 onClick={() => handleAddNode('end')}
               >
                 + End
@@ -554,7 +552,7 @@ function ProcessEditorInner() {
               >
                 → Horizontal
               </button>
-              <div style={{ borderLeft: '1px solid var(--border)', height: 24, margin: '0 0.5rem' }} />
+              <div className="toolbar-divider" />
               <button
                 className="btn btn-secondary btn-sm"
                 onClick={handleFitView}
