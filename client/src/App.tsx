@@ -1,16 +1,19 @@
-import { useState, useEffect } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
-import ProcessEditor from './pages/ProcessEditor';
-import ProjectTracker from './pages/ProjectTracker';
-import ProcessList from './pages/ProcessList';
 import { ToastProvider } from './components/Toast';
-import ProjectList from './pages/ProjectList';
-import DatabaseViewer from './pages/DatabaseViewer';
-import { GraphExplorer } from './pages/GraphExplorer';
-import Calendar from './pages/Calendar';
+import { PageSpinner } from './components/LoadingSkeleton';
 
 import { useKeyboardShortcuts, useSequenceShortcuts } from './hooks/useKeyboardShortcuts';
 import KeyboardShortcutsModal from './components/KeyboardShortcutsModal';
+
+// Lazy-loaded page routes — each becomes its own chunk
+const ProcessList = lazy(() => import('./pages/ProcessList'));
+const ProcessEditor = lazy(() => import('./pages/ProcessEditor'));
+const ProjectList = lazy(() => import('./pages/ProjectList'));
+const ProjectTracker = lazy(() => import('./pages/ProjectTracker'));
+const Calendar = lazy(() => import('./pages/Calendar'));
+const DatabaseViewer = lazy(() => import('./pages/DatabaseViewer'));
+const GraphExplorer = lazy(() => import('./pages/GraphExplorer').then((m) => ({ default: m.GraphExplorer })));
 
 export default function App() {
   const location = useLocation();
@@ -112,15 +115,17 @@ export default function App() {
         ))}
       </nav>
 
-      <Routes>
-        <Route path="/" element={<ProcessList />} />
-        <Route path="/process/:id" element={<ProcessEditor />} />
-        <Route path="/projects" element={<ProjectList />} />
-        <Route path="/project/:id" element={<ProjectTracker />} />
-        <Route path="/project/:id/calendar" element={<Calendar />} />
-        <Route path="/database" element={<DatabaseViewer />} />
-        <Route path="/explorer" element={<GraphExplorer />} />
-      </Routes>
+      <Suspense fallback={<PageSpinner />}>
+        <Routes>
+          <Route path="/" element={<ProcessList />} />
+          <Route path="/process/:id" element={<ProcessEditor />} />
+          <Route path="/projects" element={<ProjectList />} />
+          <Route path="/project/:id" element={<ProjectTracker />} />
+          <Route path="/project/:id/calendar" element={<Calendar />} />
+          <Route path="/database" element={<DatabaseViewer />} />
+          <Route path="/explorer" element={<GraphExplorer />} />
+        </Routes>
+      </Suspense>
     </div>
       {showShortcuts && (
         <KeyboardShortcutsModal onClose={() => setShowShortcutsModal(false)} />
