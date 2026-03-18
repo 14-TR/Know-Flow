@@ -188,3 +188,36 @@
 .react-flow__minimap-node[style*="fill: rgb(52"] {
   fill: var(--success) !important;
 }
+
+/* ============================================
+   Responsive — mobile (max 480px)
+   ============================================ */
+
+@media (max-width: 480px) {
+  /* Compact process name in toolbar */
+  .toolbar-process-name {
+    max-width: 100px;
+    font-size: 0.75rem;
+  }
+
+  /* Hide the layout toolbar label */
+  .toolbar-label {
+    display: none;
+  }
+
+  /* Compact toolbar buttons */
+  .toolbar .btn-sm {
+    padding: 0.3rem 0.55rem;
+    font-size: 0.75rem;
+  }
+
+  /* NodeEditorPanel field meta: stack on very narrow screens */
+  .nep-field-meta {
+    flex-wrap: wrap;
+  }
+
+  .nep-type-select {
+    width: 100%;
+    flex-shrink: unset;
+  }
+}
