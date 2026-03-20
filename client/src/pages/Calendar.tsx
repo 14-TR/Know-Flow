@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import './Calendar.css';
 
@@ -42,6 +42,12 @@ export default function Calendar() {
   const [editDate, setEditDate] = useState('');
   const [monthOffset, setMonthOffset] = useState(0);
   const [error, setError] = useState('');
+
+  // Drag-and-drop state
+  const [dragNodeId, setDragNodeId] = useState<string | null>(null);
+  const [dropTargetDay, setDropTargetDay] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+  const dragNodeRef = useRef<string | null>(null);
 
   const load = async () => {
     try {
@@ -89,6 +95,48 @@ export default function Calendar() {
     await load();
   };
 
+  // Drag-and-drop reschedule: drop node onto a day cell
+  const rescheduleNode = async (nodeId: string, newDate: string) => {
+    const node = nodes.find(n => n.node_id === nodeId);
+    if (!node) return;
+    setSaving(true);
+    try {
+      await fetch(`${API}/projects/${projectId}/nodes/${nodeId}/date`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          due_date: newDate,
+          estimated_days: node.estimated_days,
+          pinned: true,
+        }),
+      });
+      await load();
+    } catch (e: any) { setError(e.message); }
+    setSaving(false);
+  };
+
+  const handleDragStart = (nodeId: string) => {
+    setDragNodeId(nodeId);
+    dragNodeRef.current = nodeId;
+  };
+
+  const handleDragEnd = () => {
+    setDragNodeId(null);
+    setDropTargetDay(null);
+    dragNodeRef.current = null;
+  };
+
+  const handleDrop = (day: number) => {
+    const nid = dragNodeRef.current;
+    if (!nid) return;
+    const d = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), day);
+    const iso = d.toISOString().split('T')[0];
+    rescheduleNode(nid, iso);
+    setDragNodeId(null);
+    setDropTargetDay(null);
+    dragNodeRef.current = null;
+  };
+
   const nodesWithDates = nodes.filter(n => n.due_date);
   const allDates = nodesWithDates.map(n => new Date(n.due_date!));
   const minDate = allDates.length ? new Date(Math.min(...allDates.map(d => d.getTime()))) : new Date();
@@ -105,6 +153,8 @@ export default function Calendar() {
     const ds = d.toISOString().split('T')[0];
     return nodesWithDates.filter(n => n.due_date === ds);
   };
+
+  const isDragging = dragNodeId !== null;
 
   return (
     <div className="cal-page">
@@ -144,6 +194,7 @@ export default function Calendar() {
           {nodesWithDates.length > 0 && (
             <span className="cal-count">{nodesWithDates.length}/{nodes.length} nodes scheduled</span>
           )}
+          {saving && <span className="cal-saving">Saving…</span>}
         </div>
         {error && <div className="cal-error">{error}</div>}
       </div>
@@ -206,14 +257,19 @@ export default function Calendar() {
           )}
         </div>
       ) : (
-        /* Month Grid */
+        /* Month Grid — with drag-and-drop */
         <div className="cal-month-wrap">
           <div className="month-nav">
             <button onClick={() => setMonthOffset(o => o - 1)}>‹</button>
             <span>{viewMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
             <button onClick={() => setMonthOffset(o => o + 1)}>›</button>
           </div>
-          <div className="month-grid">
+          {isDragging && (
+            <div className="month-drag-hint">
+              Drop on a day to reschedule · release outside to cancel
+            </div>
+          )}
+          <div className={`month-grid${isDragging ? ' month-grid--dragging' : ''}`}>
             {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => (
               <div key={d} className="month-dow">{d}</div>
             ))}
@@ -224,14 +280,39 @@ export default function Calendar() {
               const day = i + 1;
               const dayNodes = monthNodes(day);
               const isToday = new Date().toDateString() === new Date(viewMonth.getFullYear(), viewMonth.getMonth(), day).toDateString();
+              const isDropTarget = dropTargetDay === day;
               return (
-                <div key={day} className={`month-cell ${isToday ? 'today' : ''}`}>
+                <div
+                  key={day}
+                  className={`month-cell${isToday ? ' today' : ''}${isDropTarget ? ' drop-target' : ''}`}
+                  onDragOver={isDragging ? (e) => { e.preventDefault(); setDropTargetDay(day); } : undefined}
+                  onDragLeave={isDragging ? () => setDropTargetDay(null) : undefined}
+                  onDrop={isDragging ? (e) => { e.preventDefault(); handleDrop(day); } : undefined}
+                >
                   <span className="month-day-num">{day}</span>
                   {dayNodes.map(n => (
-                    <div key={n.node_id} className="month-node"
+                    <div
+                      key={n.node_id}
+                      className={`month-node${dragNodeId === n.node_id ? ' dragging' : ''}`}
                       style={{ background: n.date_pinned ? '#f59e0b' : STATUS_COLORS[n.status] || '#6b7280' }}
-                      onClick={() => { setSelectedNode(n); setEditDays(String(n.estimated_days || '')); setEditDate(n.due_date || ''); }}>
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.effectAllowed = 'move';
+                        handleDragStart(n.node_id);
+                      }}
+                      onDragEnd={handleDragEnd}
+                      onClick={(e) => {
+                        if (dragNodeId) return;
+                        e.stopPropagation();
+                        setSelectedNode(n);
+                        setEditDays(String(n.estimated_days || ''));
+                        setEditDate(n.due_date || '');
+                      }}
+                      title="Drag to reschedule · click to edit"
+                    >
+                      <span className="month-node-drag-handle" aria-hidden>⠿</span>
                       {TYPE_ICONS[n.type]} {n.title}
+                      {n.date_pinned ? <span className="month-node-pin">📌</span> : null}
                     </div>
                   ))}
                 </div>
@@ -241,14 +322,32 @@ export default function Calendar() {
         </div>
       )}
 
-      {/* Unscheduled nodes */}
+      {/* Unscheduled nodes — also draggable into month */}
       {nodes.filter(n => !n.due_date).length > 0 && (
         <div className="cal-unscheduled">
-          <h3>Unscheduled ({nodes.filter(n => !n.due_date).length})</h3>
+          <h3>
+            Unscheduled ({nodes.filter(n => !n.due_date).length})
+            {view === 'month' && <span className="unsched-hint"> · drag to month to schedule</span>}
+          </h3>
           <div className="unsched-list">
             {nodes.filter(n => !n.due_date).map(n => (
-              <div key={n.node_id} className="unsched-node"
-                onClick={() => { setSelectedNode(n); setEditDays(String(n.estimated_days || '')); setEditDate(''); }}>
+              <div
+                key={n.node_id}
+                className={`unsched-node${dragNodeId === n.node_id ? ' dragging' : ''}`}
+                draggable={view === 'month'}
+                onDragStart={view === 'month' ? (e) => {
+                  e.dataTransfer.effectAllowed = 'move';
+                  handleDragStart(n.node_id);
+                } : undefined}
+                onDragEnd={view === 'month' ? handleDragEnd : undefined}
+                onClick={() => {
+                  if (dragNodeId) return;
+                  setSelectedNode(n);
+                  setEditDays(String(n.estimated_days || ''));
+                  setEditDate('');
+                }}
+                title={view === 'month' ? 'Drag to month grid to schedule' : 'Click to set date'}
+              >
                 {TYPE_ICONS[n.type]} {n.title}
                 <span className="unsched-type">{n.type}</span>
               </div>
