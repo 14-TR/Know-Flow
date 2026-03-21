@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getProjects, getProcesses, createProject, deleteProject, exportProject, importProject } from '../services/api';
 import type { Project, Process } from '../types';
 import Modal from '../components/Modal';
+import ConfirmModal from '../components/ConfirmModal';
 import { useToast } from '../components/Toast';
 import { ListSkeleton } from '../components/LoadingSkeleton';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
@@ -18,6 +19,7 @@ export default function ProjectList() {
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
   const { toast } = useToast();
 
   // Keyboard shortcut: 'n' → new project (only when processes exist)
@@ -73,13 +75,19 @@ export default function ProjectList() {
     }
   };
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
+  const handleDeleteRequest = (id: string, name: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this project?')) return;
+    setConfirmDelete({ id, name });
+  };
 
+  const handleDeleteConfirm = async () => {
+    if (!confirmDelete) return;
+    const { id } = confirmDelete;
+    setConfirmDelete(null);
     try {
       await deleteProject(id);
       setProjects(projects.filter((p) => p.id !== id));
+      toast('Project deleted', 'success');
     } catch (error) {
       toast((error as Error).message || 'Failed to delete project', 'error');
     }
@@ -96,7 +104,7 @@ export default function ProjectList() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (error) {
-      alert('Export failed: ' + (error as Error).message);
+      toast('Export failed: ' + (error as Error).message, 'error');
     }
   };
 
@@ -244,7 +252,7 @@ export default function ProjectList() {
                     </button>
                     <button
                       className="btn btn-danger btn-sm"
-                      onClick={(e) => handleDelete(project.id, e)}
+                      onClick={(e) => handleDeleteRequest(project.id, project.name, e)}
                     >
                       Delete
                     </button>
@@ -290,6 +298,17 @@ export default function ProjectList() {
             </button>
           </div>
         </Modal>
+      )}
+
+      {confirmDelete && (
+        <ConfirmModal
+          title="Delete Project"
+          message={`Are you sure you want to delete "${confirmDelete.name}"? All tracked progress will be lost.`}
+          confirmLabel="Delete"
+          variant="danger"
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setConfirmDelete(null)}
+        />
       )}
     </div>
   );

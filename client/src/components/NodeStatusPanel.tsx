@@ -21,18 +21,21 @@ export default function NodeStatusPanel({ node, onUpdate, onClose }: Props) {
   const [decisionResult, setDecisionResult] = useState(node.decision_result || '');
   const [formData, setFormData] = useState<Record<string, unknown>>(node.form_data || {});
   const [notes, setNotes] = useState(node.notes || '');
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
     setStatus(node.project_status || 'not_started');
     setDecisionResult(node.decision_result || '');
     setFormData(node.form_data || {});
     setNotes(node.notes || '');
+    setValidationError(null);
   }, [node]);
 
   const formFields: FormField[] = node.form_schema?.fields || [];
 
   const handleSave = () => {
     if (!node.status_id) return;
+    setValidationError(null);
     onUpdate(node.status_id, {
       status,
       decision_result: decisionResult || undefined,
@@ -43,15 +46,17 @@ export default function NodeStatusPanel({ node, onUpdate, onClose }: Props) {
 
   const handleStartTask = () => {
     if (!node.status_id) return;
+    setValidationError(null);
     onUpdate(node.status_id, { status: 'in_progress' });
   };
 
   const handleCompleteTask = () => {
     if (!node.status_id) return;
     if (node.type === 'decision' && !decisionResult) {
-      alert('Please select a decision result before completing this node.');
+      setValidationError('Please select a decision result before completing this node.');
       return;
     }
+    setValidationError(null);
     onUpdate(node.status_id, {
       status: 'complete',
       decision_result: decisionResult || undefined,
@@ -136,12 +141,27 @@ export default function NodeStatusPanel({ node, onUpdate, onClose }: Props) {
           <p className="nsp-description">{node.description}</p>
         )}
 
+        {/* Inline validation error */}
+        {validationError && (
+          <div className="nsp-validation-error">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            {validationError}
+          </div>
+        )}
+
         {node.type === 'decision' && (
           <div className="form-group">
             <label>Decision Result</label>
             <select
               value={decisionResult}
-              onChange={(e) => setDecisionResult(e.target.value)}
+              onChange={(e) => {
+                setDecisionResult(e.target.value);
+                if (e.target.value) setValidationError(null);
+              }}
             >
               <option value="">Select decision...</option>
               {decisionOptions.map((opt) => (

@@ -135,3 +135,25 @@
   color: var(--danger);
   margin-left: 0.125rem;
 }
+
+/* ============================================
+   Inline validation error
+   ============================================ */
+
+.nsp-validation-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  background: var(--danger-dim);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-radius: var(--radius-sm);
+  color: var(--danger);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  margin-bottom: 0.875rem;
+}
+
+.nsp-validation-error svg {
+  flex-shrink: 0;
+}
