@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getProcesses, createProcess, deleteProcess, exportProcess, importProcess } from '../services/api';
 import type { Process } from '../types';
 import Modal from '../components/Modal';
+import ConfirmModal from '../components/ConfirmModal';
 import OnboardingBanner, { useOnboardingDismissed } from '../components/OnboardingBanner';
 import { useToast } from '../components/Toast';
 import { ListSkeleton } from '../components/LoadingSkeleton';
@@ -19,6 +20,7 @@ export default function ProcessList() {
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
   const { toast } = useToast();
 
   // Keyboard shortcut: 'n' → new process
@@ -66,13 +68,19 @@ export default function ProcessList() {
     }
   };
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
+  const handleDeleteRequest = (id: string, name: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this process?')) return;
+    setConfirmDelete({ id, name });
+  };
 
+  const handleDeleteConfirm = async () => {
+    if (!confirmDelete) return;
+    const { id } = confirmDelete;
+    setConfirmDelete(null);
     try {
       await deleteProcess(id);
       setProcesses(processes.filter((p) => p.id !== id));
+      toast('Process deleted', 'success');
     } catch (error) {
       toast((error as Error).message || 'Failed to delete process', 'error');
     }
@@ -89,7 +97,7 @@ export default function ProcessList() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (error) {
-      alert('Export failed: ' + (error as Error).message);
+      toast('Export failed: ' + (error as Error).message, 'error');
     }
   };
 
@@ -103,7 +111,7 @@ export default function ProcessList() {
       const data = JSON.parse(text);
       const result = await importProcess(data);
       setProcesses(prev => [result.process as any, ...prev]);
-      await loadProcesses(); // Reload to get full data
+      await loadProcesses();
     } catch (error) {
       setImportError('Import failed: ' + (error as Error).message);
     } finally {
@@ -210,7 +218,7 @@ export default function ProcessList() {
                   </button>
                   <button
                     className="btn btn-danger btn-sm"
-                    onClick={(e) => handleDelete(process.id, e)}
+                    onClick={(e) => handleDeleteRequest(process.id, process.name, e)}
                   >
                     Delete
                   </button>
@@ -250,6 +258,17 @@ export default function ProcessList() {
             </button>
           </div>
         </Modal>
+      )}
+
+      {confirmDelete && (
+        <ConfirmModal
+          title="Delete Process"
+          message={`Are you sure you want to delete "${confirmDelete.name}"? This cannot be undone.`}
+          confirmLabel="Delete"
+          variant="danger"
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setConfirmDelete(null)}
+        />
       )}
     </div>
   );
