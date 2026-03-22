@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import './Calendar.css';
 
@@ -29,6 +29,15 @@ const TYPE_ICONS: Record<string, string> = {
   task: '📋', decision: '⬡', milestone: '🏁', start: '▶', end: '⏹',
 };
 
+// --- Gantt drag state (kept outside component to avoid stale closures) ---
+interface GanttDrag {
+  nodeId: string;
+  startX: number;      // clientX at drag start
+  originalDate: string;  // ISO date string
+  totalDays: number;    // total days in gantt window
+  trackWidth: number;   // pixel width of the track area
+}
+
 export default function Calendar() {
   const { id: projectId } = useParams<{ id: string }>();
   const [nodes, setNodes] = useState<CalNode[]>([]);
@@ -43,11 +52,20 @@ export default function Calendar() {
   const [monthOffset, setMonthOffset] = useState(0);
   const [error, setError] = useState('');
 
-  // Drag-and-drop state
+  // Month drag state
   const [dragNodeId, setDragNodeId] = useState<string | null>(null);
   const [dropTargetDay, setDropTargetDay] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const dragNodeRef = useRef<string | null>(null);
+
+  // Gantt drag state
+  const [ganttDragNodeId, setGanttDragNodeId] = useState<string | null>(null);
+  const [ganttPreviewDate, setGanttPreviewDate] = useState<string | null>(null);
+  const [ganttTooltipPos, setGanttTooltipPos] = useState<{ x: number; y: number } | null>(null);
+  const ganttDragRef = useRef<GanttDrag | null>(null);
+  const ganttWrapRef = useRef<HTMLDivElement>(null);
+  // Ref to minDate for drag calculations
+  const minDateRef = useRef<Date>(new Date());
 
   const load = async () => {
     try {
@@ -95,7 +113,7 @@ export default function Calendar() {
     await load();
   };
 
-  // Drag-and-drop reschedule: drop node onto a day cell
+  // Shared reschedule helper
   const rescheduleNode = async (nodeId: string, newDate: string) => {
     const node = nodes.find(n => n.node_id === nodeId);
     if (!node) return;
@@ -115,6 +133,7 @@ export default function Calendar() {
     setSaving(false);
   };
 
+  // ── Month drag handlers ──────────────────────────────────────────────
   const handleDragStart = (nodeId: string) => {
     setDragNodeId(nodeId);
     dragNodeRef.current = nodeId;
@@ -137,11 +156,91 @@ export default function Calendar() {
     dragNodeRef.current = null;
   };
 
+  // ── Gantt drag handlers ──────────────────────────────────────────────
+  const handleGanttMouseDown = useCallback((
+    e: React.MouseEvent,
+    node: CalNode,
+    totalDays: number,
+  ) => {
+    e.stopPropagation();
+    const wrap = ganttWrapRef.current;
+    if (!wrap) return;
+    // The track area is wrap.scrollWidth minus the label width (220px)
+    const LABEL_W = 220;
+    const trackWidth = wrap.clientWidth - LABEL_W;
+    if (trackWidth <= 0) return;
+
+    ganttDragRef.current = {
+      nodeId: node.node_id,
+      startX: e.clientX,
+      originalDate: node.due_date!,
+      totalDays,
+      trackWidth,
+    };
+    setGanttDragNodeId(node.node_id);
+    setGanttPreviewDate(node.due_date);
+    setGanttTooltipPos({ x: e.clientX, y: e.clientY - 36 });
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      const drag = ganttDragRef.current;
+      if (!drag) return;
+
+      const deltaX = e.clientX - drag.startX;
+      const daysShift = Math.round((deltaX / drag.trackWidth) * Math.min(drag.totalDays, 180));
+      const orig = new Date(drag.originalDate);
+      orig.setDate(orig.getDate() + daysShift);
+      const preview = orig.toISOString().split('T')[0];
+      setGanttPreviewDate(preview);
+      setGanttTooltipPos({ x: e.clientX, y: e.clientY - 36 });
+    };
+
+    const handleMouseUp = async (e: MouseEvent) => {
+      const drag = ganttDragRef.current;
+      if (!drag) return;
+
+      const deltaX = e.clientX - drag.startX;
+      const daysShift = Math.round((deltaX / drag.trackWidth) * Math.min(drag.totalDays, 180));
+
+      ganttDragRef.current = null;
+      setGanttDragNodeId(null);
+      setGanttPreviewDate(null);
+      setGanttTooltipPos(null);
+
+      if (Math.abs(daysShift) === 0) return; // no movement — treat as click
+
+      const orig = new Date(drag.originalDate);
+      orig.setDate(orig.getDate() + daysShift);
+      const newDate = orig.toISOString().split('T')[0];
+      await rescheduleNode(drag.nodeId, newDate);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes, projectId]);
+
+  // ── Derived gantt values ─────────────────────────────────────────────
   const nodesWithDates = nodes.filter(n => n.due_date);
   const allDates = nodesWithDates.map(n => new Date(n.due_date!));
   const minDate = allDates.length ? new Date(Math.min(...allDates.map(d => d.getTime()))) : new Date();
   const maxDate = allDates.length ? new Date(Math.max(...allDates.map(d => d.getTime()))) : new Date();
   const totalDays = Math.max(1, Math.ceil((maxDate.getTime() - minDate.getTime()) / 86400000) + 1);
+
+  // Keep minDateRef up to date
+  minDateRef.current = minDate;
+
+  // Today indicator offset
+  const todayOffset = Math.ceil((new Date().getTime() - minDate.getTime()) / 86400000);
+  const todayPct = Math.min(totalDays, 180) > 0
+    ? (todayOffset / Math.min(totalDays, 180)) * 100
+    : -1;
+  const showTodayLine = todayPct >= 0 && todayPct <= 100;
 
   // Month view helpers
   const now = new Date();
@@ -158,6 +257,16 @@ export default function Calendar() {
 
   return (
     <div className="cal-page">
+      {/* Gantt drag tooltip */}
+      {ganttTooltipPos && ganttPreviewDate && (
+        <div
+          className="gantt-drag-tooltip"
+          style={{ left: ganttTooltipPos.x, top: ganttTooltipPos.y }}
+        >
+          📌 {ganttPreviewDate}
+        </div>
+      )}
+
       {/* Header bar */}
       <div className="cal-header">
         <div className="cal-title">
@@ -201,13 +310,19 @@ export default function Calendar() {
 
       {/* Main view */}
       {view === 'gantt' ? (
-        <div className="cal-gantt-wrap">
+        <div className="cal-gantt-wrap" ref={ganttWrapRef}>
           {nodesWithDates.length === 0 ? (
             <div className="cal-empty">No dates scheduled yet. Hit ⚡ Generate Schedule above.</div>
           ) : (
-            <div className="cal-gantt">
+            <div className={`cal-gantt${ganttDragNodeId ? ' gantt--dragging' : ''}`}>
               {/* Date axis */}
               <div className="gantt-axis">
+                {/* Today line */}
+                {showTodayLine && (
+                  <div className="gantt-today-line" style={{ left: `${todayPct}%` }}>
+                    <span className="gantt-today-label">Today</span>
+                  </div>
+                )}
                 {Array.from({ length: Math.min(totalDays, 180) }).map((_, i) => {
                   const d = new Date(minDate);
                   d.setDate(d.getDate() + i);
@@ -226,7 +341,10 @@ export default function Calendar() {
               {nodesWithDates
                 .sort((a, b) => (a.due_date || '').localeCompare(b.due_date || ''))
                 .map(node => {
-                  const due = new Date(node.due_date!);
+                  const isDraggingThis = ganttDragNodeId === node.node_id;
+                  // Use preview date while dragging this node
+                  const displayDate = isDraggingThis && ganttPreviewDate ? ganttPreviewDate : node.due_date!;
+                  const due = new Date(displayDate);
                   const start = subtractDays(due, node.estimated_days || 0);
                   const startOff = Math.max(0, Math.ceil((start.getTime() - minDate.getTime()) / 86400000));
                   const endOff   = Math.ceil((due.getTime() - minDate.getTime()) / 86400000);
@@ -235,19 +353,30 @@ export default function Calendar() {
                   const color = node.date_pinned ? '#f59e0b' : STATUS_COLORS[node.status] || '#6b7280';
 
                   return (
-                    <div key={node.node_id} className="gantt-row" onClick={() => {
-                      setSelectedNode(node);
-                      setEditDays(String(node.estimated_days || ''));
-                      setEditDate(node.due_date || '');
-                    }}>
+                    <div
+                      key={node.node_id}
+                      className={`gantt-row${isDraggingThis ? ' gantt-row--dragging' : ''}`}
+                      onClick={() => {
+                        if (ganttDragNodeId) return;
+                        setSelectedNode(node);
+                        setEditDays(String(node.estimated_days || ''));
+                        setEditDate(node.due_date || '');
+                      }}
+                    >
                       <div className="gantt-label">
                         <span>{TYPE_ICONS[node.type] || '•'}</span>
                         <span className="gantt-title">{node.title}</span>
                         {node.date_pinned ? <span className="pin-badge">📌</span> : null}
                       </div>
                       <div className="gantt-track">
-                        <div className="gantt-bar" style={{ left, width, background: color }}>
-                          <span className="gantt-bar-label">{node.due_date}</span>
+                        <div
+                          className={`gantt-bar${isDraggingThis ? ' gantt-bar--active' : ''}`}
+                          style={{ left, width, background: color }}
+                          onMouseDown={(e) => handleGanttMouseDown(e, node, totalDays)}
+                          title="Drag to reschedule · click to edit"
+                        >
+                          <span className="gantt-bar-drag-handle" aria-hidden>⠿</span>
+                          <span className="gantt-bar-label">{displayDate}</span>
                         </div>
                       </div>
                     </div>

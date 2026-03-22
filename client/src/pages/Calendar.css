@@ -741,3 +741,84 @@
   from { opacity: 0.5; }
   to   { opacity: 1; }
 }
+
+/* ============================================
+   Gantt drag-to-reschedule
+   ============================================ */
+
+/* Global drag cursor when gantt bar is being dragged */
+.gantt--dragging {
+  cursor: ew-resize !important;
+  user-select: none;
+}
+
+.gantt--dragging * {
+  pointer-events: none !important;
+}
+
+/* Re-enable pointer on the dragging bar itself */
+.gantt-bar {
+  cursor: ew-resize;
+}
+
+.gantt-bar--active {
+  opacity: 0.75;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.6), 0 4px 16px rgba(0, 0, 0, 0.5);
+  z-index: 5;
+}
+
+/* Drag handle pill inside bar */
+.gantt-bar-drag-handle {
+  font-size: 0.6rem;
+  opacity: 0.6;
+  margin-right: 3px;
+  letter-spacing: -1px;
+}
+
+/* Row highlight while dragging */
+.gantt-row--dragging .gantt-label {
+  color: var(--text-primary);
+}
+
+/* Floating tooltip showing preview date */
+.gantt-drag-tooltip {
+  position: fixed;
+  transform: translateX(-50%);
+  padding: 0.3rem 0.75rem;
+  background: var(--bg-overlay);
+  backdrop-filter: var(--glass);
+  -webkit-backdrop-filter: var(--glass);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+  z-index: 9999;
+  white-space: nowrap;
+}
+
+/* Today indicator line in gantt axis */
+.gantt-today-line {
+  position: absolute;
+  top: 0;
+  bottom: -100vh; /* extends into row area */
+  width: 1px;
+  background: var(--accent);
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.gantt-today-label {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--accent-hover);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
