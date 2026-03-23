@@ -5,6 +5,7 @@ import { PageSpinner } from './components/LoadingSkeleton';
 
 import { useKeyboardShortcuts, useSequenceShortcuts } from './hooks/useKeyboardShortcuts';
 import KeyboardShortcutsModal from './components/KeyboardShortcutsModal';
+import WelcomeModal, { useWelcomeSeen } from './components/WelcomeModal';
 
 // Lazy-loaded page routes — each becomes its own chunk
 const ProcessList = lazy(() => import('./pages/ProcessList'));
@@ -19,6 +20,7 @@ export default function App() {
   const location = useLocation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [showShortcuts, setShowShortcutsModal] = useState(false);
+  const [welcomeSeen, markWelcomeSeen] = useWelcomeSeen();
 
   // Close mobile nav on route change
   useEffect(() => {
@@ -129,6 +131,13 @@ export default function App() {
     </div>
       {showShortcuts && (
         <KeyboardShortcutsModal onClose={() => setShowShortcutsModal(false)} />
+      )}
+      {!welcomeSeen && (
+        <WelcomeModal
+          onClose={markWelcomeSeen}
+          onGoToProcesses={() => navigate('/')}
+          onGoToProjects={() => navigate('/projects')}
+        />
       )}
     </ToastProvider>
   );

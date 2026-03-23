@@ -148,7 +148,7 @@ export default function ProcessList() {
   return (
     <div className="list-page">
       <div className="list-page-inner">
-        {!onboardingDismissed && <OnboardingBanner onDismiss={dismissOnboarding} />}
+        {!onboardingDismissed && <OnboardingBanner onDismiss={dismissOnboarding} firstProcessId={processes[0]?.id} />}
         {importError && (
           <div className="error-banner" style={{ marginBottom: '1rem' }}>
             {importError}

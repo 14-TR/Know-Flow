@@ -1158,7 +1158,7 @@ body {
   width: 1.375rem;
   height: 1.375rem;
   border-radius: 50%;
-  background: var(--accent-color);
+  background: var(--accent);
   color: #fff;
   font-size: 0.75rem;
   font-weight: 700;
@@ -1166,6 +1166,13 @@ body {
   align-items: center;
   justify-content: center;
   margin-top: 0.1rem;
+}
+
+.onboarding-banner-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  flex-wrap: wrap;
 }
 
 /* ============================================
