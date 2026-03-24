@@ -8,10 +8,53 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+---
+
+## [1.3.0] - 2026-03-24
+
+### Added
+
+#### Onboarding & Demo Experience
+- `WelcomeModal` — first-launch modal with feature overview and call-to-action
+- `OnboardingBanner` — persistent top-of-page guide for new users (dismissible)
+- Demo seed API (`POST /api/demo/seed`) — re-loads realistic sample data on demand
+- Rich seed data: Software Feature Development process + 2 in-progress projects
+- Property Development Process seed with 17 nodes
+
+#### Keyboard Shortcuts
+- Global `?` to open shortcuts help modal
+- Sequence shortcuts: `g p` (Processes), `g j` (Projects), `g e` (Explorer)
+- `n` in list views to open New item modal
+- `/` in Graph Explorer to focus search
+- `Esc` to close any modal or panel
+- `KeyboardShortcutsModal` component with styled `<kbd>` chips
+
+#### Calendar & Gantt Improvements
+- Drag-to-reschedule in month calendar view
+- Drag-to-reschedule in Gantt view
+- Today indicator line in Gantt
+
+#### Performance
+- Lazy-loaded routes via React.lazy + Suspense
+- Vite manual chunk splitting (vendor, reactflow, recharts)
+
 ### Changed
+
+#### Design — Apple Dark Mode Pass
+- Full dark mode redesign for Calendar page
+- Full dark mode redesign for ProcessEditor page
+- Full dark mode redesign for DatabaseViewer page
+- Mobile-responsive Calendar (month + Gantt views) and ProcessEditor
+
+#### Error Handling
+- Replaced all `confirm()` / `alert()` calls with on-brand `ConfirmModal` dialogs
+- Toast notifications on delete/import/export actions
+- Graceful load-error states with retry button on list pages
+
+#### Docs
 - Rebranded README from Know-Flow to ProjectIQ
-- Updated feature documentation to reflect current state (dark mode, onboarding, export/import, error handling)
-- Restructured README for demo/interview readability
+- Fixed API reference: export endpoints are `GET`, not `POST`
+- Updated features section to reflect current state
 
 ---
 
@@ -166,6 +209,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 1.3.0 | 2026-03-24 | Onboarding, keyboard shortcuts, dark mode pass, perf, error handling |
 | 1.2.0 | 2025-01-28 | Multi-user team deployment, shared templates |
 | 1.1.0 | 2025-01-25 | Bug fixes, documentation, license |
 | 1.0.1 | 2025-01-25 | Graph RAG API, MCP Server, Graph Explorer UI |

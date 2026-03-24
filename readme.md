@@ -129,7 +129,7 @@ projectiq/
 | POST | `/api/processes` | Create process |
 | PUT | `/api/processes/:id` | Update process |
 | DELETE | `/api/processes/:id` | Delete process |
-| POST | `/api/processes/:id/export` | Export as JSON |
+| GET  | `/api/processes/:id/export` | Export as JSON |
 | POST | `/api/processes/import` | Import from JSON |
 
 ### Projects
@@ -140,7 +140,7 @@ projectiq/
 | POST | `/api/projects` | Create from template |
 | PUT | `/api/projects/:id` | Update project |
 | DELETE | `/api/projects/:id` | Delete project |
-| POST | `/api/projects/:id/export` | Export as JSON |
+| GET  | `/api/projects/:id/export` | Export as JSON |
 | POST | `/api/projects/import` | Import from JSON |
 
 ### Graph RAG
