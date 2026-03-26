@@ -27,6 +27,16 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
     ],
   },
   {
+    group: 'Editor',
+    shortcuts: [
+      { keys: ['Delete'], description: 'Delete selected node or edge' },
+      { keys: ['Esc'], description: 'Deselect / close panel' },
+      { keys: ['f'], description: 'Fit view' },
+      { keys: ['⌘', 'L'], description: 'Auto-layout (vertical)' },
+      { keys: ['⌘', '⇧', 'L'], description: 'Auto-layout (horizontal)' },
+    ],
+  },
+  {
     group: 'General',
     shortcuts: [
       { keys: ['?'], description: 'Show keyboard shortcuts' },
