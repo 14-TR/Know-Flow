@@ -1,15 +1,15 @@
 # CLAUDE.md - Project Guide for Claude Code
 
-This file provides context for Claude Code when working with the Know-Flow codebase.
+This file provides context for Claude Code when working with the ProjectIQ codebase.
 
 ## Project Overview
 
-Know-Flow is an interactive, editable context graph (decision flow chart) application for tracking processes and decisions across multiple projects. It includes Graph RAG capabilities for LLM/IDE integration.
+ProjectIQ is an AI-powered project intelligence dashboard. Model and track complex processes as interactive knowledge graphs — with built-in Graph RAG for LLM/IDE integration.
 
 ## Architecture
 
 ```
-Know-Flow/
+projectiq/
 ├── api/           # Express + TypeScript backend (port 3001)
 ├── client/        # React + TypeScript + Vite frontend (port 5173)
 ├── mcp-server/    # Model Context Protocol server for LLM integration
