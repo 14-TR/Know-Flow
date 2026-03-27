@@ -38,6 +38,7 @@ import EditableEdge from '../components/EditableEdge';
 import NodeEditorPanel from '../components/NodeEditorPanel';
 import EdgeEditorPanel from '../components/EdgeEditorPanel';
 import { PageSpinner } from '../components/LoadingSkeleton';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 const nodeTypes = {
   custom: CustomNode,
@@ -457,6 +458,61 @@ function ProcessEditorInner() {
     }
   };
 
+  // Keyboard shortcuts for editor power users
+  useKeyboardShortcuts(
+    [
+      {
+        key: 'Delete',
+        description: 'Delete selected node or edge',
+        group: 'Editor',
+        handler: () => {
+          if (selectedNode) handleDeleteNode();
+          else if (selectedEdge) handleDeleteEdge();
+        },
+      },
+      {
+        key: 'Backspace',
+        description: 'Delete selected node or edge',
+        group: 'Editor',
+        handler: () => {
+          if (selectedNode) handleDeleteNode();
+          else if (selectedEdge) handleDeleteEdge();
+        },
+      },
+      {
+        key: 'Escape',
+        description: 'Deselect / close panel',
+        group: 'Editor',
+        handler: () => {
+          setSelectedNode(null);
+          setSelectedEdge(null);
+        },
+      },
+      {
+        key: 'f',
+        description: 'Fit view',
+        group: 'Editor',
+        handler: handleFitView,
+      },
+      {
+        key: 'l',
+        meta: true,
+        description: 'Auto-layout (vertical)',
+        group: 'Editor',
+        handler: () => handleAutoLayout('vertical'),
+      },
+      {
+        key: 'l',
+        meta: true,
+        shift: true,
+        description: 'Auto-layout (horizontal)',
+        group: 'Editor',
+        handler: () => handleAutoLayout('horizontal'),
+      },
+    ],
+    false,
+  );
+
   if (loading) {
     return <PageSpinner />;
   }
@@ -493,6 +549,7 @@ function ProcessEditorInner() {
           snapToGrid
           snapGrid={[10, 10]}
           defaultEdgeOptions={{ type: 'editable' }}
+          deleteKeyCode={null}
         >
           <Controls />
           <MiniMap />
