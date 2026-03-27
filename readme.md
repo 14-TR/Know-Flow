@@ -52,6 +52,34 @@ ProjectIQ lets you define reusable process templates as directed graphs, then in
 
 ---
 
+
+## Screenshots
+
+### Process Templates
+Browse and manage reusable workflow templates.
+
+![Process Templates](docs/screenshots/01-process-list.png)
+
+### Process Editor
+Visual drag-and-drop graph editor with node types and edge routing.
+
+![Process Editor](docs/screenshots/02-process-editor.png)
+
+### Project Tracker
+Track active projects against process templates with node-by-node status.
+
+![Project Tracker](docs/screenshots/04-project-tracker.png)
+
+### Graph Explorer
+Full-text search, neighborhood exploration, and context building across all knowledge graphs.
+
+![Graph Explorer](docs/screenshots/05-graph-explorer.png)
+
+### Database Viewer
+Inspect raw SQLite tables — useful for debugging and auditing.
+
+![Database Viewer](docs/screenshots/06-database-viewer.png)
+
 ## Tech Stack
 
 | Layer | Technology |
