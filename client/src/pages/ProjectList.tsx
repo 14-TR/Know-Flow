@@ -245,6 +245,13 @@ export default function ProjectList() {
                     </button>
                     <button
                       className="btn btn-secondary btn-sm"
+                      onClick={(e) => { e.stopPropagation(); navigate(`/project/${project.id}/calendar`); }}
+                      title="Open project calendar"
+                    >
+                      📅 Calendar
+                    </button>
+                    <button
+                      className="btn btn-secondary btn-sm"
                       onClick={(e) => handleExport(project.id, project.name, e)}
                       title="Export project backup"
                     >
