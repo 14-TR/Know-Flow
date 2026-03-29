@@ -137,13 +137,13 @@ describe('project export/import', () => {
 
   describe('POST /import', () => {
     it('rejects payload missing project name', () => {
-      const payload = { project: { process_id: 'proc-1' }, node_statuses: [] };
+      const payload: { project: { name?: string; process_id?: string }, node_statuses: unknown[] } = { project: { process_id: 'proc-1' }, node_statuses: [] };
       const isInvalid = !payload.project?.name;
       expect(isInvalid).toBe(true);
     });
 
     it('rejects payload missing process_id', () => {
-      const payload = { project: { name: 'My Project' }, node_statuses: [] };
+      const payload: { project: { name?: string; process_id?: string }, node_statuses: unknown[] } = { project: { name: 'My Project' }, node_statuses: [] };
       const isInvalid = !payload.project?.process_id;
       expect(isInvalid).toBe(true);
     });
