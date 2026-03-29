@@ -4,7 +4,7 @@
  * This middleware gates write operations (POST/PUT/PATCH/DELETE) to admin users only,
  * while allowing all GET (read-only) requests through regardless of role.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Request, Response, NextFunction } from 'express';
 
 // Mock the db module to avoid side effects (database connections, file I/O)

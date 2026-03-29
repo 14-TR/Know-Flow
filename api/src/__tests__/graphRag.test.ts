@@ -574,7 +574,7 @@ describe('Graph RAG Routes', () => {
       const res = await request(app, 'GET', '/api/graph/export/process/proc-1');
 
       expect(res.status).toBe(200);
-      const body = res.body as { process: { id: string }; nodes: unknown[]; edges: unknown[] };
+      const body = res.body as { process: { id: string }; nodes: unknown[]; edges: unknown[]; exported_at?: string };
       expect(body.process.id).toBe('proc-1');
       expect(body.nodes).toHaveLength(5);
       expect(body.exported_at).toBeDefined();

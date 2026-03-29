@@ -102,7 +102,7 @@ describe('process export/import routes', () => {
 
   describe('POST /import', () => {
     it('rejects payload missing process name', async () => {
-      const payload = { process: {}, nodes: [], edges: [] };
+      const payload: { process: { name?: string }, nodes: unknown[], edges: unknown[] } = { process: {}, nodes: [], edges: [] };
       const isInvalid = !payload.process?.name;
       expect(isInvalid).toBe(true);
     });
