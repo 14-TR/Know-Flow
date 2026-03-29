@@ -14,10 +14,12 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import { getProject, updateProjectNodeStatus } from '../services/api';
+import { getProject, updateProject, updateProjectNodeStatus } from '../services/api';
 import type { Project, ProjectNodeWithStatus, ProjectEdgeWithStatus, ProjectNodeStatus } from '../types';
 import ProjectNode from '../components/ProjectNode';
 import NodeStatusPanel from '../components/NodeStatusPanel';
+import Modal from '../components/Modal';
+import { useToast } from '../components/Toast';
 import './ProjectTracker.css';
 import { PageSpinner } from '../components/LoadingSkeleton';
 
@@ -25,14 +27,24 @@ const nodeTypes = {
   project: ProjectNode,
 };
 
+const PROJECT_STATUSES = ['active', 'completed', 'archived'] as const;
+type ProjectStatus = typeof PROJECT_STATUSES[number];
+
 export default function ProjectTracker() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [project, setProject] = useState<Project | null>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges] = useEdgesState<Edge>([]);
   const [selectedNode, setSelectedNode] = useState<ProjectNodeWithStatus | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Edit project modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editStatus, setEditStatus] = useState<ProjectStatus>('active');
+  const [editSaving, setEditSaving] = useState(false);
 
   useEffect(() => {
     if (id) loadProject(id);
@@ -108,6 +120,31 @@ export default function ProjectTracker() {
     }
   };
 
+  const openEditModal = () => {
+    if (!project) return;
+    setEditName(project.name);
+    setEditStatus((project.status as ProjectStatus) || 'active');
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!project || !id || !editName.trim()) return;
+    setEditSaving(true);
+    try {
+      const updated = await updateProject(id, {
+        name: editName.trim(),
+        status: editStatus,
+      });
+      setProject({ ...project, ...updated });
+      setShowEditModal(false);
+      toast('Project updated', 'success');
+    } catch (err) {
+      toast('Failed to save: ' + (err as Error).message, 'error');
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   const getProgress = () => {
     if (!project?.nodes) return 0;
     const completed = project.nodes.filter(
@@ -136,60 +173,123 @@ export default function ProjectTracker() {
   const progress = getProgress();
 
   return (
-    <div className="main-content">
-      <div className="graph-container">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onNodeClick={handleNodeClick}
-          onPaneClick={handlePaneClick}
-          nodeTypes={nodeTypes}
-          fitView
-          nodesDraggable={false}
-          nodesConnectable={false}
-          elementsSelectable={true}
-        >
-          <Controls showInteractive={false} />
-          <MiniMap />
-          <Background variant={BackgroundVariant.Dots} gap={20} />
+    <>
+      <div className="main-content">
+        <div className="graph-container">
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onNodeClick={handleNodeClick}
+            onPaneClick={handlePaneClick}
+            nodeTypes={nodeTypes}
+            fitView
+            nodesDraggable={false}
+            nodesConnectable={false}
+            elementsSelectable={true}
+          >
+            <Controls showInteractive={false} />
+            <MiniMap />
+            <Background variant={BackgroundVariant.Dots} gap={20} />
 
-          <Panel position="top-left">
-            <div className="panel toolbar tracker-toolbar">
-              <div className="tracker-toolbar-row">
-                <button
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => navigate('/projects')}
-                >
-                  ← Back
-                </button>
-                <span className="tracker-project-name">{project.name}</span>
-                <span className={`status-badge ${project.status}`}>
-                  {project.status}
-                </span>
-              </div>
-              <div className="tracker-progress-row">
-                <span className="tracker-progress-label">Progress</span>
-                <div className="tracker-progress-bar">
-                  <div
-                    className="tracker-progress-bar-fill"
-                    style={{ width: `${progress}%` }}
-                  />
+            <Panel position="top-left">
+              <div className="panel toolbar tracker-toolbar">
+                <div className="tracker-toolbar-row">
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => navigate('/projects')}
+                  >
+                    ← Back
+                  </button>
+                  <span className="tracker-project-name">{project.name}</span>
+                  <span className={`status-badge ${project.status}`}>
+                    {project.status}
+                  </span>
                 </div>
-                <span className="tracker-progress-pct">{progress}%</span>
+                <div className="tracker-progress-row">
+                  <span className="tracker-progress-label">Progress</span>
+                  <div className="tracker-progress-bar">
+                    <div
+                      className="tracker-progress-bar-fill"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                  <span className="tracker-progress-pct">{progress}%</span>
+                </div>
+                <div className="tracker-toolbar-row tracker-action-row">
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={openEditModal}
+                    title="Edit project name and status"
+                  >
+                    ✏️ Edit
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-sm tracker-calendar-btn"
+                    onClick={() => navigate(`/project/${id}/calendar`)}
+                    title="Open project calendar"
+                  >
+                    📅 Calendar
+                  </button>
+                </div>
               </div>
-            </div>
-          </Panel>
-        </ReactFlow>
+            </Panel>
+          </ReactFlow>
 
-        {selectedNode && (
-          <NodeStatusPanel
-            node={selectedNode}
-            onUpdate={handleUpdateStatus}
-            onClose={() => setSelectedNode(null)}
-          />
-        )}
+          {selectedNode && (
+            <NodeStatusPanel
+              node={selectedNode}
+              onUpdate={handleUpdateStatus}
+              onClose={() => setSelectedNode(null)}
+            />
+          )}
+        </div>
       </div>
-    </div>
+
+      {showEditModal && (
+        <Modal title="Edit Project" onClose={() => setShowEditModal(false)}>
+          <div className="form-group">
+            <label>Project Name</label>
+            <input
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              placeholder="Project name"
+              autoFocus
+              onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit()}
+            />
+          </div>
+          <div className="form-group">
+            <label>Status</label>
+            <select
+              value={editStatus}
+              onChange={(e) => setEditStatus(e.target.value as ProjectStatus)}
+            >
+              {PROJECT_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-actions">
+            <button
+              className="btn btn-secondary"
+              onClick={() => setShowEditModal(false)}
+              disabled={editSaving}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleSaveEdit}
+              disabled={editSaving || !editName.trim()}
+            >
+              {editSaving ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        </Modal>
+      )}
+    </>
   );
 }

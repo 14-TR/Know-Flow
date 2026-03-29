@@ -142,3 +142,34 @@
     padding: 0.5rem 0.625rem;
   }
 }
+
+/* ============================================
+   Action Row — Edit / Calendar buttons
+   ============================================ */
+
+.tracker-action-row {
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--border);
+  margin-top: 0.125rem;
+}
+
+.tracker-calendar-btn {
+  color: var(--accent-hover) !important;
+  border-color: rgba(99, 102, 241, 0.3) !important;
+}
+
+.tracker-calendar-btn:hover {
+  background: var(--accent-dim) !important;
+  border-color: rgba(99, 102, 241, 0.5) !important;
+}
+
+@media (max-width: 480px) {
+  .tracker-action-row {
+    gap: 0.25rem;
+  }
+
+  .tracker-action-row .btn {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.5rem;
+  }
+}
