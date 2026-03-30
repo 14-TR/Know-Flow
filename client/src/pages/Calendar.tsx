@@ -255,6 +255,18 @@ export default function Calendar() {
 
   const isDragging = dragNodeId !== null;
 
+  // ── Quick-glance stats ───────────────────────────────────────────────
+  const todayStr = new Date().toISOString().split('T')[0];
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  const weekStartStr = weekStart.toISOString().split('T')[0];
+  const weekEndStr   = weekEnd.toISOString().split('T')[0];
+  const statsThisWeek  = nodesWithDates.filter(n => n.due_date! >= weekStartStr && n.due_date! <= weekEndStr).length;
+  const statsOverdue   = nodesWithDates.filter(n => n.due_date! < todayStr && n.status !== 'complete').length;
+  const statsComplete  = nodes.filter(n => n.status === 'complete').length;
+
   return (
     <div className="cal-page">
       {/* Gantt drag tooltip */}
@@ -307,6 +319,31 @@ export default function Calendar() {
         </div>
         {error && <div className="cal-error">{error}</div>}
       </div>
+
+      {/* Stats strip */}
+      {nodesWithDates.length > 0 && (
+        <div className="cal-stats-strip">
+          <div className="cal-stat-item">
+            <span className="cal-stat-num">{nodesWithDates.length}</span>
+            <span className="cal-stat-label">scheduled</span>
+          </div>
+          <div className="cal-stat-divider" />
+          <div className="cal-stat-item">
+            <span className={`cal-stat-num ${statsOverdue > 0 ? 'overdue' : ''}`}>{statsOverdue}</span>
+            <span className="cal-stat-label">overdue</span>
+          </div>
+          <div className="cal-stat-divider" />
+          <div className="cal-stat-item">
+            <span className="cal-stat-num week">{statsThisWeek}</span>
+            <span className="cal-stat-label">this week</span>
+          </div>
+          <div className="cal-stat-divider" />
+          <div className="cal-stat-item">
+            <span className="cal-stat-num done">{statsComplete}</span>
+            <span className="cal-stat-label">complete</span>
+          </div>
+        </div>
+      )}
 
       {/* Main view */}
       {view === 'gantt' ? (
@@ -373,10 +410,11 @@ export default function Calendar() {
                           className={`gantt-bar${isDraggingThis ? ' gantt-bar--active' : ''}`}
                           style={{ left, width, background: color }}
                           onMouseDown={(e) => handleGanttMouseDown(e, node, totalDays)}
-                          title="Drag to reschedule · click to edit"
+                          title={`${node.title} · Due: ${displayDate} · ${node.estimated_days || 0}d · ${node.status.replace('_', ' ')}`}
                         >
                           <span className="gantt-bar-drag-handle" aria-hidden>⠿</span>
-                          <span className="gantt-bar-label">{displayDate}</span>
+                          <span className="gantt-bar-title">{node.title}</span>
+                          <span className="gantt-bar-date">{displayDate}</span>
                         </div>
                       </div>
                     </div>
@@ -419,7 +457,7 @@ export default function Calendar() {
                   onDrop={isDragging ? (e) => { e.preventDefault(); handleDrop(day); } : undefined}
                 >
                   <span className="month-day-num">{day}</span>
-                  {dayNodes.map(n => (
+                  {dayNodes.slice(0, 3).map(n => (
                     <div
                       key={n.node_id}
                       className={`month-node${dragNodeId === n.node_id ? ' dragging' : ''}`}
@@ -437,13 +475,28 @@ export default function Calendar() {
                         setEditDays(String(n.estimated_days || ''));
                         setEditDate(n.due_date || '');
                       }}
-                      title="Drag to reschedule · click to edit"
+                      title={`${n.title} · ${n.estimated_days || 0}d · ${n.status.replace('_', ' ')}`}
                     >
                       <span className="month-node-drag-handle" aria-hidden>⠿</span>
                       {TYPE_ICONS[n.type]} {n.title}
                       {n.date_pinned ? <span className="month-node-pin">📌</span> : null}
                     </div>
                   ))}
+                  {dayNodes.length > 3 && (
+                    <div
+                      className="month-overflow"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const first = dayNodes[3];
+                        setSelectedNode(first);
+                        setEditDays(String(first.estimated_days || ''));
+                        setEditDate(first.due_date || '');
+                      }}
+                      title={`${dayNodes.length - 3} more: ${dayNodes.slice(3).map(n => n.title).join(', ')}`}
+                    >
+                      +{dayNodes.length - 3} more
+                    </div>
+                  )}
                 </div>
               );
             })}
