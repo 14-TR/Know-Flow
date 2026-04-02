@@ -438,3 +438,43 @@ export const importProject = (data: unknown): Promise<ImportProjectResult> =>
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
+
+// Dashboard
+export interface DashboardStats {
+  processCount: number;
+  nodeCount: number;
+  projectTotal: number;
+  projectActive: number;
+  projectCompleted: number;
+  projectArchived: number;
+  avgCompletion: number;
+  todayCompleted: number;
+  inProgressNodes: number;
+}
+
+export interface DashboardProject {
+  id: string;
+  name: string;
+  status: string;
+  process_name: string;
+  total_nodes: number;
+  completed_nodes: number;
+  created_at: string;
+}
+
+export interface DashboardProcess {
+  id: string;
+  name: string;
+  description: string | null;
+  node_count: number;
+  edge_count: number;
+  created_at: string;
+}
+
+export interface DashboardData {
+  stats: DashboardStats;
+  recentProjects: DashboardProject[];
+  recentProcesses: DashboardProcess[];
+}
+
+export const getDashboard = () => fetchApi<DashboardData>('/dashboard');

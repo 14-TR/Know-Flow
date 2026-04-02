@@ -9,6 +9,7 @@ import { debugRoutes } from './routes/debug.js';
 import { graphRagRoutes } from './routes/graphRag.js';
 import scheduleRouter from './routes/schedule.js';
 import { demoRoutes } from './routes/demo.js';
+import { dashboardRoutes } from './routes/dashboard.js';
 import { initDatabase, isAdmin, knowflowUser } from './utils/db.js';
 import { adminOnly } from './middleware/adminOnly.js';
 
@@ -43,6 +44,7 @@ app.use('/api/debug', debugRoutes);
 app.use('/api/graph', graphRagRoutes);
 app.use('/api', scheduleRouter);
 app.use('/api/demo', demoRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
