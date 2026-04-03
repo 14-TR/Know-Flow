@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useToast } from '../components/Toast';
 import { useParams, Link } from 'react-router-dom';
 import './Calendar.css';
 
@@ -18,6 +19,7 @@ interface CalNode {
 
 type ViewMode = 'gantt' | 'month';
 type Direction = 'forward' | 'backward';
+type StatusFilter = 'all' | 'not_started' | 'in_progress' | 'complete' | 'skipped';
 
 const STATUS_COLORS: Record<string, string> = {
   complete:    '#22c55e',
@@ -25,17 +27,32 @@ const STATUS_COLORS: Record<string, string> = {
   not_started: '#6b7280',
   skipped:     '#9ca3af',
 };
+
+// Text-safe status icons (ASCII/Unicode, no emoji that break JSX string literals)
+const SI: Record<string, string> = {
+  complete:    '✓',
+  in_progress: '⏳',
+  not_started: '○',
+  skipped:     '↷',
+};
+
 const TYPE_ICONS: Record<string, string> = {
   task: '📋', decision: '⬡', milestone: '🏁', start: '▶', end: '⏹',
 };
 
-// --- Gantt drag state (kept outside component to avoid stale closures) ---
 interface GanttDrag {
   nodeId: string;
-  startX: number;      // clientX at drag start
-  originalDate: string;  // ISO date string
-  totalDays: number;    // total days in gantt window
-  trackWidth: number;   // pixel width of the track area
+  startX: number;
+  originalDate: string;
+  totalDays: number;
+  trackWidth: number;
+}
+
+function isOverdue(node: CalNode): boolean {
+  if (!node.due_date) return false;
+  if (node.status === 'complete' || node.status === 'skipped') return false;
+  const today = new Date().toISOString().split('T')[0];
+  return node.due_date < today;
 }
 
 export default function Calendar() {
@@ -50,22 +67,19 @@ export default function Calendar() {
   const [editDays, setEditDays] = useState('');
   const [editDate, setEditDate] = useState('');
   const [monthOffset, setMonthOffset] = useState(0);
-  const [error, setError] = useState('');
-
-  // Month drag state
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [dragNodeId, setDragNodeId] = useState<string | null>(null);
   const [dropTargetDay, setDropTargetDay] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
   const dragNodeRef = useRef<string | null>(null);
-
-  // Gantt drag state
   const [ganttDragNodeId, setGanttDragNodeId] = useState<string | null>(null);
   const [ganttPreviewDate, setGanttPreviewDate] = useState<string | null>(null);
   const [ganttTooltipPos, setGanttTooltipPos] = useState<{ x: number; y: number } | null>(null);
   const ganttDragRef = useRef<GanttDrag | null>(null);
   const ganttWrapRef = useRef<HTMLDivElement>(null);
-  // Ref to minDate for drag calculations
   const minDateRef = useRef<Date>(new Date());
+  const todayLineRef = useRef<HTMLDivElement>(null);
 
   const load = async () => {
     try {
@@ -73,19 +87,17 @@ export default function Calendar() {
       const d = await r.json();
       setProject(d.project);
       setNodes(d.nodes || []);
-    } catch (e: any) { setError(e.message); }
+    } catch (e: any) { toast('Failed to load calendar data. Please refresh.', 'error'); }
   };
 
   useEffect(() => { load(); }, [projectId]);
 
   const generateSchedule = async () => {
     setGenerating(true);
-    setError('');
     try {
       const body: any = { direction };
       if (direction === 'forward') body.startDate = anchorDate;
       else body.endDate = anchorDate;
-
       const r = await fetch(`${API}/projects/${projectId}/schedule`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -94,26 +106,30 @@ export default function Calendar() {
       const d = await r.json();
       if (!d.success) throw new Error(d.error || 'Schedule failed');
       await load();
-    } catch (e: any) { setError(e.message); }
+      toast('Schedule generated!', 'success');
+    } catch (e: any) { toast(e.message || 'Schedule generation failed', 'error'); }
     setGenerating(false);
   };
 
   const pinDate = async () => {
     if (!selectedNode) return;
-    await fetch(`${API}/projects/${projectId}/nodes/${selectedNode.node_id}/date`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        due_date: editDate || selectedNode.due_date,
-        estimated_days: editDays ? parseInt(editDays) : selectedNode.estimated_days,
-        pinned: true,
-      }),
-    });
-    setSelectedNode(null);
-    await load();
+    try {
+      const res = await fetch(`${API}/projects/${projectId}/nodes/${selectedNode.node_id}/date`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          due_date: editDate || selectedNode.due_date,
+          estimated_days: editDays ? parseInt(editDays) : selectedNode.estimated_days,
+          pinned: true,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to save date');
+      setSelectedNode(null);
+      await load();
+      toast('Date pinned', 'success');
+    } catch (e: any) { toast(e.message || 'Failed to pin date', 'error'); }
   };
 
-  // Shared reschedule helper
   const rescheduleNode = async (nodeId: string, newDate: string) => {
     const node = nodes.find(n => n.node_id === nodeId);
     if (!node) return;
@@ -122,61 +138,33 @@ export default function Calendar() {
       await fetch(`${API}/projects/${projectId}/nodes/${nodeId}/date`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          due_date: newDate,
-          estimated_days: node.estimated_days,
-          pinned: true,
-        }),
+        body: JSON.stringify({ due_date: newDate, estimated_days: node.estimated_days, pinned: true }),
       });
       await load();
-    } catch (e: any) { setError(e.message); }
+      toast('Date updated', 'success');
+    } catch (e: any) { toast(e.message || 'Failed to reschedule', 'error'); }
     setSaving(false);
   };
 
-  // ── Month drag handlers ──────────────────────────────────────────────
-  const handleDragStart = (nodeId: string) => {
-    setDragNodeId(nodeId);
-    dragNodeRef.current = nodeId;
-  };
-
-  const handleDragEnd = () => {
-    setDragNodeId(null);
-    setDropTargetDay(null);
-    dragNodeRef.current = null;
-  };
+  const handleDragStart = (nodeId: string) => { setDragNodeId(nodeId); dragNodeRef.current = nodeId; };
+  const handleDragEnd = () => { setDragNodeId(null); setDropTargetDay(null); dragNodeRef.current = null; };
 
   const handleDrop = (day: number) => {
     const nid = dragNodeRef.current;
     if (!nid) return;
     const d = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), day);
-    const iso = d.toISOString().split('T')[0];
-    rescheduleNode(nid, iso);
-    setDragNodeId(null);
-    setDropTargetDay(null);
-    dragNodeRef.current = null;
+    rescheduleNode(nid, d.toISOString().split('T')[0]);
+    setDragNodeId(null); setDropTargetDay(null); dragNodeRef.current = null;
   };
 
-  // ── Gantt drag handlers ──────────────────────────────────────────────
-  const handleGanttMouseDown = useCallback((
-    e: React.MouseEvent,
-    node: CalNode,
-    totalDays: number,
-  ) => {
+  const handleGanttMouseDown = useCallback((e: React.MouseEvent, node: CalNode, totalDays: number) => {
     e.stopPropagation();
     const wrap = ganttWrapRef.current;
     if (!wrap) return;
-    // The track area is wrap.scrollWidth minus the label width (220px)
     const LABEL_W = 220;
     const trackWidth = wrap.clientWidth - LABEL_W;
     if (trackWidth <= 0) return;
-
-    ganttDragRef.current = {
-      nodeId: node.node_id,
-      startX: e.clientX,
-      originalDate: node.due_date!,
-      totalDays,
-      trackWidth,
-    };
+    ganttDragRef.current = { nodeId: node.node_id, startX: e.clientX, originalDate: node.due_date!, totalDays, trackWidth };
     setGanttDragNodeId(node.node_id);
     setGanttPreviewDate(node.due_date);
     setGanttTooltipPos({ x: e.clientX, y: e.clientY - 36 });
@@ -186,100 +174,82 @@ export default function Calendar() {
     const handleMouseMove = (e: MouseEvent) => {
       const drag = ganttDragRef.current;
       if (!drag) return;
-
       const deltaX = e.clientX - drag.startX;
       const daysShift = Math.round((deltaX / drag.trackWidth) * Math.min(drag.totalDays, 180));
       const orig = new Date(drag.originalDate);
       orig.setDate(orig.getDate() + daysShift);
-      const preview = orig.toISOString().split('T')[0];
-      setGanttPreviewDate(preview);
+      setGanttPreviewDate(orig.toISOString().split('T')[0]);
       setGanttTooltipPos({ x: e.clientX, y: e.clientY - 36 });
     };
-
     const handleMouseUp = async (e: MouseEvent) => {
       const drag = ganttDragRef.current;
       if (!drag) return;
-
       const deltaX = e.clientX - drag.startX;
       const daysShift = Math.round((deltaX / drag.trackWidth) * Math.min(drag.totalDays, 180));
-
       ganttDragRef.current = null;
-      setGanttDragNodeId(null);
-      setGanttPreviewDate(null);
-      setGanttTooltipPos(null);
-
-      if (Math.abs(daysShift) === 0) return; // no movement — treat as click
-
+      setGanttDragNodeId(null); setGanttPreviewDate(null); setGanttTooltipPos(null);
+      if (Math.abs(daysShift) === 0) return;
       const orig = new Date(drag.originalDate);
       orig.setDate(orig.getDate() + daysShift);
-      const newDate = orig.toISOString().split('T')[0];
-      await rescheduleNode(drag.nodeId, newDate);
+      await rescheduleNode(drag.nodeId, orig.toISOString().split('T')[0]);
     };
-
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
+    return () => { window.removeEventListener('mousemove', handleMouseMove); window.removeEventListener('mouseup', handleMouseUp); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes, projectId]);
 
-  // ── Derived gantt values ─────────────────────────────────────────────
+  const jumpToToday = () => {
+    todayLineRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  };
+
+  // ── Derived values ────────────────────────────────────────────────────
   const nodesWithDates = nodes.filter(n => n.due_date);
   const allDates = nodesWithDates.map(n => new Date(n.due_date!));
   const minDate = allDates.length ? new Date(Math.min(...allDates.map(d => d.getTime()))) : new Date();
   const maxDate = allDates.length ? new Date(Math.max(...allDates.map(d => d.getTime()))) : new Date();
   const totalDays = Math.max(1, Math.ceil((maxDate.getTime() - minDate.getTime()) / 86400000) + 1);
-
-  // Keep minDateRef up to date
   minDateRef.current = minDate;
 
-  // Today indicator offset
   const todayOffset = Math.ceil((new Date().getTime() - minDate.getTime()) / 86400000);
-  const todayPct = Math.min(totalDays, 180) > 0
-    ? (todayOffset / Math.min(totalDays, 180)) * 100
-    : -1;
+  const todayPct = Math.min(totalDays, 180) > 0 ? (todayOffset / Math.min(totalDays, 180)) * 100 : -1;
   const showTodayLine = todayPct >= 0 && todayPct <= 100;
 
-  // Month view helpers
+  // Stats
+  const overdueCount = nodesWithDates.filter(isOverdue).length;
+  const statusCounts = nodes.reduce((acc, n) => {
+    acc[n.status] = (acc[n.status] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  // Filter
+  const filteredScheduledNodes = statusFilter === 'all' ? nodesWithDates : nodesWithDates.filter(n => n.status === statusFilter);
+  const filteredUnscheduled = statusFilter === 'all'
+    ? nodes.filter(n => !n.due_date)
+    : nodes.filter(n => !n.due_date && n.status === statusFilter);
+
+  // Month helpers
   const now = new Date();
   const viewMonth = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
   const daysInMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 0).getDate();
   const firstDow = viewMonth.getDay();
-  const monthNodes = (day: number) => {
+  const monthNodesFn = (day: number) => {
     const d = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), day);
-    const ds = d.toISOString().split('T')[0];
-    return nodesWithDates.filter(n => n.due_date === ds);
+    return filteredScheduledNodes.filter(n => n.due_date === d.toISOString().split('T')[0]);
   };
 
   const isDragging = dragNodeId !== null;
-
-  // ── Quick-glance stats ───────────────────────────────────────────────
-  const todayStr = new Date().toISOString().split('T')[0];
-  const weekStart = new Date();
-  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 6);
-  const weekStartStr = weekStart.toISOString().split('T')[0];
-  const weekEndStr   = weekEnd.toISOString().split('T')[0];
-  const statsThisWeek  = nodesWithDates.filter(n => n.due_date! >= weekStartStr && n.due_date! <= weekEndStr).length;
-  const statsOverdue   = nodesWithDates.filter(n => n.due_date! < todayStr && n.status !== 'complete').length;
-  const statsComplete  = nodes.filter(n => n.status === 'complete').length;
 
   return (
     <div className="cal-page">
       {/* Gantt drag tooltip */}
       {ganttTooltipPos && ganttPreviewDate && (
-        <div
-          className="gantt-drag-tooltip"
-          style={{ left: ganttTooltipPos.x, top: ganttTooltipPos.y }}
-        >
+        <div className="gantt-drag-tooltip" style={{ left: ganttTooltipPos.x, top: ganttTooltipPos.y }}>
           📌 {ganttPreviewDate}
         </div>
       )}
 
-      {/* Header bar */}
+      {/* Header */}
       <div className="cal-header">
         <div className="cal-title">
           <Link to={`/project/${projectId}`} className="cal-back">← Back</Link>
@@ -294,69 +264,77 @@ export default function Calendar() {
         </div>
       </div>
 
-      {/* Schedule Generator */}
+      {/* Stats bar */}
+      {nodes.length > 0 && (
+        <div className="cal-stats-bar">
+          <div className="cal-stat-pill">
+            <span className="cal-stat-dot" style={{ background: '#6b7280' }} />
+            <span className="cal-stat-label">{statusCounts.not_started || 0} pending</span>
+          </div>
+          <div className="cal-stat-pill">
+            <span className="cal-stat-dot" style={{ background: '#3b82f6' }} />
+            <span className="cal-stat-label">{statusCounts.in_progress || 0} in progress</span>
+          </div>
+          <div className="cal-stat-pill">
+            <span className="cal-stat-dot" style={{ background: '#22c55e' }} />
+            <span className="cal-stat-label">{statusCounts.complete || 0} complete</span>
+          </div>
+          {overdueCount > 0 && (
+            <div className="cal-stat-pill cal-stat-pill--overdue">
+              <span className="cal-stat-dot" style={{ background: '#f87171' }} />
+              <span className="cal-stat-label">{overdueCount} overdue</span>
+            </div>
+          )}
+          <div className="cal-stat-divider" />
+          <span className="cal-stat-label cal-stat-scheduled">{nodesWithDates.length}/{nodes.length} scheduled</span>
+        </div>
+      )}
+
+      {/* Scheduler + filter bar */}
       <div className="cal-scheduler">
         <div className="cal-scheduler-inner">
           <div className="cal-dir-toggle">
-            <button className={direction === 'forward' ? 'active' : ''} onClick={() => setDirection('forward')}>
-              ▶ Forward from start
-            </button>
-            <button className={direction === 'backward' ? 'active' : ''} onClick={() => setDirection('backward')}>
-              ◀ Backward from deadline
-            </button>
+            <button className={direction === 'forward' ? 'active' : ''} onClick={() => setDirection('forward')}>▶ Forward</button>
+            <button className={direction === 'backward' ? 'active' : ''} onClick={() => setDirection('backward')}>◀ Backward</button>
           </div>
-          <label className="cal-date-label">
-            {direction === 'forward' ? 'Project start:' : 'Must complete by:'}
-          </label>
+          <label className="cal-date-label">{direction === 'forward' ? 'Start:' : 'Deadline:'}</label>
           <input type="date" value={anchorDate} onChange={e => setAnchorDate(e.target.value)} className="cal-date-input" />
           <button className="cal-gen-btn" onClick={generateSchedule} disabled={generating}>
             {generating ? '⏳ Generating...' : '⚡ Generate Schedule'}
           </button>
-          {nodesWithDates.length > 0 && (
-            <span className="cal-count">{nodesWithDates.length}/{nodes.length} nodes scheduled</span>
+          <select
+            className="cal-status-filter"
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value as StatusFilter)}
+            aria-label="Filter by status"
+          >
+            <option value="all">All statuses</option>
+            <option value="not_started">Pending</option>
+            <option value="in_progress">In Progress</option>
+            <option value="complete">Complete</option>
+            <option value="skipped">Skipped</option>
+          </select>
+          {view === 'gantt' && showTodayLine && (
+            <button className="cal-jump-today-btn" onClick={jumpToToday} title="Jump to today">⊙ Today</button>
           )}
           {saving && <span className="cal-saving">Saving…</span>}
         </div>
-        {error && <div className="cal-error">{error}</div>}
       </div>
 
-      {/* Stats strip */}
-      {nodesWithDates.length > 0 && (
-        <div className="cal-stats-strip">
-          <div className="cal-stat-item">
-            <span className="cal-stat-num">{nodesWithDates.length}</span>
-            <span className="cal-stat-label">scheduled</span>
-          </div>
-          <div className="cal-stat-divider" />
-          <div className="cal-stat-item">
-            <span className={`cal-stat-num ${statsOverdue > 0 ? 'overdue' : ''}`}>{statsOverdue}</span>
-            <span className="cal-stat-label">overdue</span>
-          </div>
-          <div className="cal-stat-divider" />
-          <div className="cal-stat-item">
-            <span className="cal-stat-num week">{statsThisWeek}</span>
-            <span className="cal-stat-label">this week</span>
-          </div>
-          <div className="cal-stat-divider" />
-          <div className="cal-stat-item">
-            <span className="cal-stat-num done">{statsComplete}</span>
-            <span className="cal-stat-label">complete</span>
-          </div>
-        </div>
-      )}
-
-      {/* Main view */}
+      {/* Gantt view */}
       {view === 'gantt' ? (
         <div className="cal-gantt-wrap" ref={ganttWrapRef}>
-          {nodesWithDates.length === 0 ? (
-            <div className="cal-empty">No dates scheduled yet. Hit ⚡ Generate Schedule above.</div>
+          {filteredScheduledNodes.length === 0 ? (
+            <div className="cal-empty">
+              {nodesWithDates.length === 0
+                ? 'No dates scheduled yet. Hit ⚡ Generate Schedule above.'
+                : 'No nodes match the current filter.'}
+            </div>
           ) : (
             <div className={`cal-gantt${ganttDragNodeId ? ' gantt--dragging' : ''}`}>
-              {/* Date axis */}
               <div className="gantt-axis">
-                {/* Today line */}
                 {showTodayLine && (
-                  <div className="gantt-today-line" style={{ left: `${todayPct}%` }}>
+                  <div className="gantt-today-line" style={{ left: `${todayPct}%` }} ref={todayLineRef}>
                     <span className="gantt-today-label">Today</span>
                   </div>
                 )}
@@ -367,32 +345,31 @@ export default function Calendar() {
                     ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                     : d.getDay() === 1 ? d.getDate().toString() : '';
                   return (
-                    <div key={i} className={`gantt-tick ${d.getDay() === 0 || d.getDay() === 6 ? 'weekend' : ''}`}
+                    <div key={i}
+                      className={`gantt-tick ${d.getDay() === 0 || d.getDay() === 6 ? 'weekend' : ''}`}
                       style={{ left: `${(i / Math.min(totalDays, 180)) * 100}%` }}>
                       {label && <span>{label}</span>}
                     </div>
                   );
                 })}
               </div>
-              {/* Rows */}
-              {nodesWithDates
+              {filteredScheduledNodes
                 .sort((a, b) => (a.due_date || '').localeCompare(b.due_date || ''))
                 .map(node => {
                   const isDraggingThis = ganttDragNodeId === node.node_id;
-                  // Use preview date while dragging this node
                   const displayDate = isDraggingThis && ganttPreviewDate ? ganttPreviewDate : node.due_date!;
                   const due = new Date(displayDate);
                   const start = subtractDays(due, node.estimated_days || 0);
                   const startOff = Math.max(0, Math.ceil((start.getTime() - minDate.getTime()) / 86400000));
-                  const endOff   = Math.ceil((due.getTime() - minDate.getTime()) / 86400000);
-                  const left = `${(startOff / Math.min(totalDays, 180)) * 100}%`;
-                  const width = `${Math.max(0.5, ((endOff - startOff) / Math.min(totalDays, 180)) * 100)}%`;
-                  const color = node.date_pinned ? '#f59e0b' : STATUS_COLORS[node.status] || '#6b7280';
+                  const endOff = Math.ceil((due.getTime() - minDate.getTime()) / 86400000);
+                  const widthPct = Math.max(0.5, ((endOff - startOff) / Math.min(totalDays, 180)) * 100);
+                  const overdue = isOverdue(node);
+                  const barColor = overdue ? '#f87171' : (node.date_pinned ? '#f59e0b' : STATUS_COLORS[node.status] || '#6b7280');
 
                   return (
                     <div
                       key={node.node_id}
-                      className={`gantt-row${isDraggingThis ? ' gantt-row--dragging' : ''}`}
+                      className={`gantt-row${isDraggingThis ? ' gantt-row--dragging' : ''}${overdue ? ' gantt-row--overdue' : ''}`}
                       onClick={() => {
                         if (ganttDragNodeId) return;
                         setSelectedNode(node);
@@ -401,20 +378,30 @@ export default function Calendar() {
                       }}
                     >
                       <div className="gantt-label">
-                        <span>{TYPE_ICONS[node.type] || '•'}</span>
+                        <span className="gantt-status-icon" style={{ color: STATUS_COLORS[node.status] }}>
+                          {SI[node.status] || '○'}
+                        </span>
+                        <span className="gantt-type-icon">{TYPE_ICONS[node.type] || '•'}</span>
                         <span className="gantt-title">{node.title}</span>
+                        {overdue && <span className="gantt-overdue-badge" title="Overdue">!</span>}
                         {node.date_pinned ? <span className="pin-badge">📌</span> : null}
                       </div>
                       <div className="gantt-track">
                         <div
-                          className={`gantt-bar${isDraggingThis ? ' gantt-bar--active' : ''}`}
-                          style={{ left, width, background: color }}
+                          className={`gantt-bar${isDraggingThis ? ' gantt-bar--active' : ''}${overdue ? ' gantt-bar--overdue' : ''}`}
+                          style={{
+                            left: `${(startOff / Math.min(totalDays, 180)) * 100}%`,
+                            width: `${widthPct}%`,
+                            background: barColor,
+                          }}
                           onMouseDown={(e) => handleGanttMouseDown(e, node, totalDays)}
-                          title={`${node.title} · Due: ${displayDate} · ${node.estimated_days || 0}d · ${node.status.replace('_', ' ')}`}
+                          title={`${node.title} · ${displayDate}${overdue ? ' · OVERDUE' : ''}`}
                         >
                           <span className="gantt-bar-drag-handle" aria-hidden>⠿</span>
-                          <span className="gantt-bar-title">{node.title}</span>
-                          <span className="gantt-bar-date">{displayDate}</span>
+                          {widthPct > 8 && (
+                            <span className="gantt-bar-status">{SI[node.status]}</span>
+                          )}
+                          <span className="gantt-bar-label">{displayDate}</span>
                         </div>
                       </div>
                     </div>
@@ -424,7 +411,7 @@ export default function Calendar() {
           )}
         </div>
       ) : (
-        /* Month Grid — with drag-and-drop */
+        /* Month view */
         <div className="cal-month-wrap">
           <div className="month-nav">
             <button onClick={() => setMonthOffset(o => o - 1)}>‹</button>
@@ -432,9 +419,7 @@ export default function Calendar() {
             <button onClick={() => setMonthOffset(o => o + 1)}>›</button>
           </div>
           {isDragging && (
-            <div className="month-drag-hint">
-              Drop on a day to reschedule · release outside to cancel
-            </div>
+            <div className="month-drag-hint">Drop on a day to reschedule · release outside to cancel</div>
           )}
           <div className={`month-grid${isDragging ? ' month-grid--dragging' : ''}`}>
             {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => (
@@ -445,58 +430,47 @@ export default function Calendar() {
             ))}
             {Array.from({ length: daysInMonth }).map((_, i) => {
               const day = i + 1;
-              const dayNodes = monthNodes(day);
-              const isToday = new Date().toDateString() === new Date(viewMonth.getFullYear(), viewMonth.getMonth(), day).toDateString();
+              const dayNodes = monthNodesFn(day);
+              const cellDate = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), day);
+              const isToday = new Date().toDateString() === cellDate.toDateString();
+              const isPast = cellDate < new Date(new Date().toDateString());
               const isDropTarget = dropTargetDay === day;
+              const hasPastDue = dayNodes.some(n => isOverdue(n));
               return (
                 <div
                   key={day}
-                  className={`month-cell${isToday ? ' today' : ''}${isDropTarget ? ' drop-target' : ''}`}
+                  className={`month-cell${isToday ? ' today' : ''}${isPast && !isToday ? ' past' : ''}${isDropTarget ? ' drop-target' : ''}${hasPastDue ? ' has-overdue' : ''}`}
                   onDragOver={isDragging ? (e) => { e.preventDefault(); setDropTargetDay(day); } : undefined}
                   onDragLeave={isDragging ? () => setDropTargetDay(null) : undefined}
                   onDrop={isDragging ? (e) => { e.preventDefault(); handleDrop(day); } : undefined}
                 >
                   <span className="month-day-num">{day}</span>
-                  {dayNodes.slice(0, 3).map(n => (
-                    <div
-                      key={n.node_id}
-                      className={`month-node${dragNodeId === n.node_id ? ' dragging' : ''}`}
-                      style={{ background: n.date_pinned ? '#f59e0b' : STATUS_COLORS[n.status] || '#6b7280' }}
-                      draggable
-                      onDragStart={(e) => {
-                        e.dataTransfer.effectAllowed = 'move';
-                        handleDragStart(n.node_id);
-                      }}
-                      onDragEnd={handleDragEnd}
-                      onClick={(e) => {
-                        if (dragNodeId) return;
-                        e.stopPropagation();
-                        setSelectedNode(n);
-                        setEditDays(String(n.estimated_days || ''));
-                        setEditDate(n.due_date || '');
-                      }}
-                      title={`${n.title} · ${n.estimated_days || 0}d · ${n.status.replace('_', ' ')}`}
-                    >
-                      <span className="month-node-drag-handle" aria-hidden>⠿</span>
-                      {TYPE_ICONS[n.type]} {n.title}
-                      {n.date_pinned ? <span className="month-node-pin">📌</span> : null}
-                    </div>
-                  ))}
-                  {dayNodes.length > 3 && (
-                    <div
-                      className="month-overflow"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const first = dayNodes[3];
-                        setSelectedNode(first);
-                        setEditDays(String(first.estimated_days || ''));
-                        setEditDate(first.due_date || '');
-                      }}
-                      title={`${dayNodes.length - 3} more: ${dayNodes.slice(3).map(n => n.title).join(', ')}`}
-                    >
-                      +{dayNodes.length - 3} more
-                    </div>
-                  )}
+                  {dayNodes.map(n => {
+                    const over = isOverdue(n);
+                    return (
+                      <div
+                        key={n.node_id}
+                        className={`month-node${dragNodeId === n.node_id ? ' dragging' : ''}${over ? ' month-node--overdue' : ''}`}
+                        style={{ background: over ? '#f87171' : (n.date_pinned ? '#f59e0b' : STATUS_COLORS[n.status] || '#6b7280') }}
+                        draggable
+                        onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; handleDragStart(n.node_id); }}
+                        onDragEnd={handleDragEnd}
+                        onClick={(e) => {
+                          if (dragNodeId) return;
+                          e.stopPropagation();
+                          setSelectedNode(n);
+                          setEditDays(String(n.estimated_days || ''));
+                          setEditDate(n.due_date || '');
+                        }}
+                        title={`${n.title}${over ? ' · OVERDUE' : ''} · drag to reschedule`}
+                      >
+                        <span className="month-node-drag-handle" aria-hidden>⠿</span>
+                        <span className="month-node-status">{SI[n.status]}</span>
+                        {TYPE_ICONS[n.type]} {n.title}
+                        {n.date_pinned ? <span className="month-node-pin">📌</span> : null}
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })}
@@ -504,32 +478,27 @@ export default function Calendar() {
         </div>
       )}
 
-      {/* Unscheduled nodes — also draggable into month */}
-      {nodes.filter(n => !n.due_date).length > 0 && (
+      {/* Unscheduled */}
+      {filteredUnscheduled.length > 0 && (
         <div className="cal-unscheduled">
           <h3>
-            Unscheduled ({nodes.filter(n => !n.due_date).length})
+            Unscheduled ({filteredUnscheduled.length})
             {view === 'month' && <span className="unsched-hint"> · drag to month to schedule</span>}
           </h3>
           <div className="unsched-list">
-            {nodes.filter(n => !n.due_date).map(n => (
+            {filteredUnscheduled.map(n => (
               <div
                 key={n.node_id}
                 className={`unsched-node${dragNodeId === n.node_id ? ' dragging' : ''}`}
                 draggable={view === 'month'}
-                onDragStart={view === 'month' ? (e) => {
-                  e.dataTransfer.effectAllowed = 'move';
-                  handleDragStart(n.node_id);
-                } : undefined}
+                onDragStart={view === 'month' ? (e) => { e.dataTransfer.effectAllowed = 'move'; handleDragStart(n.node_id); } : undefined}
                 onDragEnd={view === 'month' ? handleDragEnd : undefined}
-                onClick={() => {
-                  if (dragNodeId) return;
-                  setSelectedNode(n);
-                  setEditDays(String(n.estimated_days || ''));
-                  setEditDate('');
-                }}
+                onClick={() => { if (dragNodeId) return; setSelectedNode(n); setEditDays(String(n.estimated_days || '')); setEditDate(''); }}
                 title={view === 'month' ? 'Drag to month grid to schedule' : 'Click to set date'}
               >
+                <span className="unsched-status" style={{ color: STATUS_COLORS[n.status] }}>
+                  {SI[n.status]}
+                </span>
                 {TYPE_ICONS[n.type]} {n.title}
                 <span className="unsched-type">{n.type}</span>
               </div>
@@ -542,7 +511,19 @@ export default function Calendar() {
       {selectedNode && (
         <div className="cal-modal-overlay" onClick={() => setSelectedNode(null)}>
           <div className="cal-modal" onClick={e => e.stopPropagation()}>
-            <h3>{TYPE_ICONS[selectedNode.type]} {selectedNode.title}</h3>
+            <div className="cal-modal-header">
+              <span className="cal-modal-type-icon">{TYPE_ICONS[selectedNode.type]}</span>
+              <h3>{selectedNode.title}</h3>
+              {isOverdue(selectedNode) && (
+                <span className="cal-modal-overdue-badge">OVERDUE</span>
+              )}
+            </div>
+            <div className="modal-status-row">
+              <span className="modal-status" style={{ background: STATUS_COLORS[selectedNode.status] }}>
+                {selectedNode.status.replace('_', ' ')}
+              </span>
+              {selectedNode.date_pinned ? <span className="pin-badge">📌 Pinned</span> : <span className="auto-badge">⚡ Auto</span>}
+            </div>
             <div className="modal-field">
               <label>Due date</label>
               <input type="date" value={editDate} onChange={e => setEditDate(e.target.value)} />
@@ -551,14 +532,8 @@ export default function Calendar() {
               <label>Estimated work days</label>
               <input type="number" min="0" value={editDays} onChange={e => setEditDays(e.target.value)} placeholder="days" />
             </div>
-            <div className="modal-row">
-              <span className="modal-status" style={{ background: STATUS_COLORS[selectedNode.status] }}>
-                {selectedNode.status.replace('_', ' ')}
-              </span>
-              {selectedNode.date_pinned ? <span className="pin-badge">📌 Pinned</span> : <span className="auto-badge">⚡ Auto</span>}
-            </div>
             <div className="modal-actions">
-              <button className="btn-pin" onClick={pinDate}>📌 Save & Pin</button>
+              <button className="btn-pin" onClick={pinDate}>📌 Save &amp; Pin</button>
               <button className="btn-cancel" onClick={() => setSelectedNode(null)}>Cancel</button>
             </div>
           </div>
