@@ -150,6 +150,97 @@
 .cal-count { color: var(--success); font-size: 0.75rem; }
 .cal-error { color: var(--danger); font-size: 0.78rem; margin-top: 0.25rem; }
 
+/* ============================================
+   Stats Bar
+   ============================================ */
+
+.cal-stats-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4rem 1.5rem;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.cal-stat-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.cal-stat-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cal-stat-label {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.cal-stat-pill--overdue .cal-stat-label {
+  color: #f87171;
+  font-weight: 600;
+}
+
+.cal-stat-divider {
+  width: 1px;
+  height: 14px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.cal-stat-scheduled {
+  color: var(--accent-hover);
+}
+
+/* ============================================
+   Status filter + Jump-to-today
+   ============================================ */
+
+.cal-status-filter {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.cal-status-filter:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.cal-status-filter option {
+  background: var(--bg-elevated);
+}
+
+.cal-jump-today-btn {
+  padding: 0.3rem 0.7rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--accent-hover);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: inherit;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.cal-jump-today-btn:hover {
+  background: var(--accent-dim);
+}
+
 .cal-empty {
   display: flex;
   align-items: center;
@@ -268,6 +359,49 @@
   color: var(--accent);
 }
 
+/* ── Gantt: status icon + overdue indicators ── */
+.gantt-status-icon {
+  font-size: 0.7rem;
+  flex-shrink: 0;
+  width: 12px;
+  text-align: center;
+}
+
+.gantt-type-icon {
+  font-size: 0.72rem;
+  flex-shrink: 0;
+}
+
+.gantt-bar-status {
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.85);
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+
+.gantt-overdue-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  background: #f87171;
+  color: white;
+  border-radius: 50%;
+  font-size: 0.6rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.gantt-row--overdue .gantt-label {
+  color: var(--text-primary);
+}
+
+.gantt-bar--overdue {
+  box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.6), 0 0 8px rgba(248, 113, 113, 0.3) !important;
+}
+
 /* Month grid */
 .cal-month-wrap {
   flex: 1;
@@ -332,6 +466,15 @@
 
 .month-cell.today { background: var(--accent-dim); }
 
+.month-cell.past {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.month-cell.has-overdue {
+  outline: 1px solid rgba(248, 113, 113, 0.35);
+  outline-offset: -1px;
+}
+
 .month-day-num {
   display: block;
   font-weight: 600;
@@ -364,6 +507,16 @@
 }
 
 .month-node:hover { opacity: 0.85; }
+
+.month-node--overdue {
+  box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.7);
+}
+
+.month-node-status {
+  font-size: 0.6rem;
+  margin-right: 1px;
+  opacity: 0.9;
+}
 
 /* Unscheduled */
 .cal-unscheduled {
@@ -409,6 +562,11 @@
   font-size: 0.65rem;
 }
 
+.unsched-status {
+  font-size: 0.65rem;
+  flex-shrink: 0;
+}
+
 /* Modal */
 .cal-modal-overlay {
   position: fixed;
@@ -431,6 +589,46 @@
   box-shadow: var(--shadow-lg);
 }
 
+.cal-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.cal-modal-type-icon {
+  font-size: 1.125rem;
+  flex-shrink: 0;
+}
+
+.cal-modal-header h3 {
+  flex: 1;
+  font-size: 1rem;
+  margin: 0;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.cal-modal-overdue-badge {
+  padding: 0.15rem 0.4rem;
+  background: rgba(248, 113, 113, 0.15);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  border-radius: var(--radius-sm);
+  color: #f87171;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.modal-status-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.875rem;
+}
+
+/* Legacy selector kept for backward compat */
 .cal-modal h3 {
   font-size: 1rem;
   margin-bottom: 1rem;
