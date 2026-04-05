@@ -14,7 +14,13 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import { getProject, updateProject, updateProjectNodeStatus } from '../services/api';
+import {
+  getProject,
+  getProjectBrief,
+  updateProject,
+  updateProjectNodeStatus,
+  type ProjectBrief,
+} from '../services/api';
 import type { Project, ProjectNodeWithStatus, ProjectEdgeWithStatus, ProjectNodeStatus } from '../types';
 import ProjectNode from '../components/ProjectNode';
 import NodeStatusPanel from '../components/NodeStatusPanel';
@@ -35,6 +41,8 @@ export default function ProjectTracker() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [project, setProject] = useState<Project | null>(null);
+  const [projectBrief, setProjectBrief] = useState<ProjectBrief | null>(null);
+  const [briefLoading, setBriefLoading] = useState(false);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges] = useEdgesState<Edge>([]);
   const [selectedNode, setSelectedNode] = useState<ProjectNodeWithStatus | null>(null);
@@ -47,8 +55,24 @@ export default function ProjectTracker() {
   const [editSaving, setEditSaving] = useState(false);
 
   useEffect(() => {
-    if (id) loadProject(id);
+    if (id) {
+      void loadProject(id);
+      void loadProjectBrief(id);
+    }
   }, [id]);
+
+  const loadProjectBrief = async (projectId: string) => {
+    setBriefLoading(true);
+    try {
+      const data = await getProjectBrief(projectId);
+      setProjectBrief(data);
+    } catch (error) {
+      console.error('Failed to load project brief:', error);
+      setProjectBrief(null);
+    } finally {
+      setBriefLoading(false);
+    }
+  };
 
   const loadProject = async (projectId: string) => {
     try {
@@ -109,7 +133,7 @@ export default function ProjectTracker() {
 
     try {
       await updateProjectNodeStatus(statusId, updates);
-      await loadProject(id);
+      await Promise.all([loadProject(id), loadProjectBrief(id)]);
 
       if (project?.nodes) {
         const updatedNode = project.nodes.find((n) => n.id === selectedNode.id);
@@ -136,6 +160,7 @@ export default function ProjectTracker() {
         status: editStatus,
       });
       setProject({ ...project, ...updated });
+      await loadProjectBrief(id);
       setShowEditModal(false);
       toast('Project updated', 'success');
     } catch (err) {
@@ -216,6 +241,43 @@ export default function ProjectTracker() {
                   </div>
                   <span className="tracker-progress-pct">{progress}%</span>
                 </div>
+                <div className="tracker-brief-card">
+                  <div className="tracker-brief-header">
+                    <span className="tracker-brief-kicker">Project brief</span>
+                    {briefLoading && <span className="tracker-brief-loading">Refreshing…</span>}
+                  </div>
+                  <p className="tracker-brief-summary">
+                    {projectBrief?.summary || 'No brief yet.'}
+                  </p>
+                  {projectBrief?.suggested_next_action && (
+                    <div className="tracker-brief-next">
+                      <span className="tracker-brief-section-label">Next best action</span>
+                      <strong>{projectBrief.suggested_next_action.title}</strong>
+                      <span>{projectBrief.suggested_next_action.rationale}</span>
+                    </div>
+                  )}
+                  {!!projectBrief?.blockers.length && (
+                    <div className="tracker-brief-list-block">
+                      <span className="tracker-brief-section-label">Watch-outs</span>
+                      <ul>
+                        {projectBrief.blockers.map((blocker) => (
+                          <li key={blocker}>{blocker}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {!!projectBrief?.upcoming.length && (
+                    <div className="tracker-brief-list-block">
+                      <span className="tracker-brief-section-label">Upcoming</span>
+                      <ul>
+                        {projectBrief.upcoming.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
                 <div className="tracker-toolbar-row tracker-action-row">
                   <button
                     className="btn btn-secondary btn-sm"

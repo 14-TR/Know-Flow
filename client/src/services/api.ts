@@ -89,6 +89,29 @@ export const getProjects = (processId?: string) =>
 
 export const getProject = (id: string) => fetchApi<Project>(`/projects/${id}`);
 
+export interface ProjectBrief {
+  summary: string;
+  blockers: string[];
+  upcoming: string[];
+  suggested_next_action: {
+    node_id: string;
+    title: string;
+    type: string;
+    rationale: string;
+  } | null;
+  stats: {
+    total: number;
+    completed: number;
+    in_progress: number;
+    not_started: number;
+    skipped: number;
+    progress_percent: number;
+  };
+}
+
+export const getProjectBrief = (id: string) =>
+  fetchApi<ProjectBrief>(`/projects/${id}/brief`);
+
 export const createProject = (data: { name: string; process_id: string }) =>
   fetchApi<Project>('/projects', {
     method: 'POST',
