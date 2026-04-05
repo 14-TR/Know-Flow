@@ -173,3 +173,81 @@
     padding: 0.3rem 0.5rem;
   }
 }
+
+/* ============================================
+   Project Brief Card
+   ============================================ */
+
+.tracker-brief-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+}
+
+.tracker-brief-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.tracker-brief-kicker,
+.tracker-brief-section-label,
+.tracker-brief-loading {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.tracker-brief-kicker,
+.tracker-brief-section-label {
+  color: var(--text-secondary);
+}
+
+.tracker-brief-loading {
+  color: var(--accent);
+}
+
+.tracker-brief-summary,
+.tracker-brief-next span,
+.tracker-brief-list-block li {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--text-primary);
+}
+
+.tracker-brief-summary {
+  margin: 0;
+}
+
+.tracker-brief-next,
+.tracker-brief-list-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.tracker-brief-next strong {
+  font-size: 0.875rem;
+  color: #c7d2fe;
+}
+
+.tracker-brief-list-block ul {
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.tracker-brief-list-block li + li {
+  margin-top: 0.2rem;
+}
+
+@media (max-width: 480px) {
+  .tracker-brief-card {
+    padding: 0.625rem;
+  }
+}

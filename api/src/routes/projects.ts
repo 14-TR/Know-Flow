@@ -2,6 +2,136 @@ import { Router, Request, Response } from 'express';
 import { query, getClient } from '../utils/db.js';
 import { ProjectRow } from '../types/db.js';
 
+interface ProjectBriefRow {
+  node_id: string;
+  title: string;
+  type: string;
+  status: string | null;
+  decision_result: string | null;
+  assigned_to: string | null;
+  notes: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+interface ProjectBrief {
+  summary: string;
+  blockers: string[];
+  upcoming: string[];
+  suggested_next_action: {
+    node_id: string;
+    title: string;
+    type: string;
+    rationale: string;
+  } | null;
+  stats: {
+    total: number;
+    completed: number;
+    in_progress: number;
+    not_started: number;
+    skipped: number;
+    progress_percent: number;
+  };
+}
+
+function buildProjectBrief(project: ProjectRow, nodeRows: ProjectBriefRow[]): ProjectBrief {
+  const normalized = nodeRows.map((row) => ({
+    ...row,
+    status: row.status ?? 'not_started',
+  }));
+
+  const total = normalized.length;
+  const completed = normalized.filter((row) => row.status === 'complete').length;
+  const inProgress = normalized.filter((row) => row.status === 'in_progress').length;
+  const notStarted = normalized.filter((row) => row.status === 'not_started').length;
+  const skipped = normalized.filter((row) => row.status === 'skipped').length;
+  const progressPercent = total > 0 ? Math.round(((completed + skipped) / total) * 100) : 0;
+
+  const blockers = Array.from(
+    new Set([
+      ...normalized
+        .filter(
+          (row) =>
+            row.type === 'decision' &&
+            (row.status === 'not_started' || row.status === 'in_progress')
+        )
+        .slice(0, 2)
+        .map((row) => `Decision pending: ${row.title}`),
+      ...normalized
+        .filter((row) => row.status === 'in_progress')
+        .slice(0, 2)
+        .map(
+          (row) =>
+            `In progress: ${row.title}${row.assigned_to ? ` — owner: ${row.assigned_to}` : ''}`
+        ),
+    ])
+  ).slice(0, 3);
+
+  const upcoming = normalized
+    .filter((row) => row.status === 'in_progress' || row.status === 'not_started')
+    .slice(0, 3)
+    .map((row) => `${row.status === 'in_progress' ? 'Continue' : 'Start'} ${row.title}`);
+
+  const decisionNode = normalized.find(
+    (row) => row.type === 'decision' && (row.status === 'not_started' || row.status === 'in_progress')
+  );
+  const inProgressNode = normalized.find((row) => row.status === 'in_progress');
+  const nextNode = normalized.find((row) => row.status === 'not_started');
+
+  const suggestedNextAction = decisionNode
+    ? {
+        node_id: decisionNode.node_id,
+        title: decisionNode.title,
+        type: decisionNode.type,
+        rationale: 'Resolve the pending decision so the graph can advance down the correct path.',
+      }
+    : inProgressNode
+      ? {
+          node_id: inProgressNode.node_id,
+          title: inProgressNode.title,
+          type: inProgressNode.type,
+          rationale: 'Finish the active node to unblock the next set of downstream steps.',
+        }
+      : nextNode
+        ? {
+            node_id: nextNode.node_id,
+            title: nextNode.title,
+            type: nextNode.type,
+            rationale: 'Start the next available node to move the project forward.',
+          }
+        : null;
+
+  const summaryParts = [total > 0 ? `${completed}/${total} nodes complete` : 'No nodes in this project yet'];
+
+  if (inProgress > 0) {
+    summaryParts.push(`${inProgress} in progress`);
+  } else if (notStarted > 0 && total > 0) {
+    summaryParts.push(`${notStarted} ready to start`);
+  }
+
+  if (project.status === 'completed') {
+    summaryParts.push('project marked complete');
+  } else if (suggestedNextAction) {
+    summaryParts.push(`focus on ${suggestedNextAction.title} next`);
+  }
+
+  return {
+    summary: `${summaryParts.join('. ')}.`,
+    blockers,
+    upcoming,
+    suggested_next_action: suggestedNextAction,
+    stats: {
+      total,
+      completed,
+      in_progress: inProgress,
+      not_started: notStarted,
+      skipped,
+      progress_percent: progressPercent,
+    },
+  };
+}
+
+
 const router = Router();
 
 // GET all projects
@@ -133,6 +263,57 @@ router.get('/:id', async (req: Request, res: Response) => {
       edges: edgesResult.rows,
       currentNodes: currentNodesResult.rows,
     });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// GET project brief / next best action
+router.get('/:id/brief', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const projectResult = await query(
+      `SELECT p.*, pr.name as process_name
+       FROM projects p
+       JOIN processes pr ON p.process_id = pr.id
+       WHERE p.id = $1`,
+      [id]
+    );
+
+    if (projectResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const project = projectResult.rows[0] as ProjectRow;
+
+    const nodeResult = await query(
+      `SELECT n.id as node_id,
+              n.title,
+              n.type,
+              pns.status,
+              pns.decision_result,
+              pns.assigned_to,
+              pns.notes,
+              pns.started_at,
+              pns.completed_at
+       FROM nodes n
+       LEFT JOIN project_node_statuses pns
+         ON pns.node_id = n.id AND pns.project_id = $1
+       WHERE n.process_id = $2
+       ORDER BY
+         CASE COALESCE(pns.status, 'not_started')
+           WHEN 'in_progress' THEN 0
+           WHEN 'not_started' THEN 1
+           WHEN 'complete' THEN 2
+           WHEN 'skipped' THEN 3
+           ELSE 4
+         END,
+         n.created_at`,
+      [id, project.process_id]
+    );
+
+    res.json(buildProjectBrief(project, nodeResult.rows as ProjectBriefRow[]));
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
