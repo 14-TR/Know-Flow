@@ -48,7 +48,69 @@ describe('Project brief route', () => {
     vi.clearAllMocks();
   });
 
-  it('returns a heuristic brief with blockers and next action', async () => {
+  it('returns a graph-aware brief that only surfaces actually ready nodes', async () => {
+    vi.mocked(db.query)
+      .mockResolvedValueOnce({
+        rows: [{ id: 'proj-1', name: 'Alpha', process_id: 'proc-1', status: 'active' }],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            node_id: 'node-2',
+            title: 'Gather requirements',
+            type: 'task',
+            status: 'not_started',
+            decision_result: null,
+            assigned_to: null,
+            notes: null,
+            started_at: null,
+            completed_at: null,
+          },
+          {
+            node_id: 'node-3',
+            title: 'Build prototype',
+            type: 'task',
+            status: 'not_started',
+            decision_result: null,
+            assigned_to: null,
+            notes: null,
+            started_at: null,
+            completed_at: null,
+          },
+          {
+            node_id: 'node-1',
+            title: 'Kickoff',
+            type: 'start',
+            status: 'complete',
+            decision_result: null,
+            assigned_to: null,
+            notes: null,
+            started_at: null,
+            completed_at: null,
+          },
+        ],
+        rowCount: 3,
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          { source_node_id: 'node-1', target_node_id: 'node-2' },
+          { source_node_id: 'node-2', target_node_id: 'node-3' },
+        ],
+        rowCount: 2,
+      });
+
+    const res = await request(app, 'GET', '/api/projects/proj-1/brief');
+
+    expect(res.status).toBe(200);
+    expect((res.body as { summary: string }).summary).toContain('1 ready to start');
+    expect((res.body as { upcoming: string[] }).upcoming).toEqual(['Start Gather requirements']);
+    expect(
+      (res.body as { suggested_next_action: { title: string } }).suggested_next_action.title
+    ).toBe('Gather requirements');
+  });
+
+  it('keeps pending decisions as the suggested next action', async () => {
     vi.mocked(db.query)
       .mockResolvedValueOnce({
         rows: [{ id: 'proj-1', name: 'Alpha', process_id: 'proc-1', status: 'active' }],
@@ -91,12 +153,15 @@ describe('Project brief route', () => {
           },
         ],
         rowCount: 3,
+      })
+      .mockResolvedValueOnce({
+        rows: [{ source_node_id: 'node-3', target_node_id: 'node-4' }],
+        rowCount: 1,
       });
 
     const res = await request(app, 'GET', '/api/projects/proj-1/brief');
 
     expect(res.status).toBe(200);
-    expect((res.body as { summary: string }).summary).toContain('1/3 nodes complete');
     expect((res.body as { blockers: string[] }).blockers).toContain(
       'Decision pending: Choose deployment path'
     );
