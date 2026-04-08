@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   searchGraph,
@@ -15,6 +15,7 @@ import {
 import type { ProcessNode } from '../types';
 import './GraphExplorer.css';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useToast } from '../components/Toast';
 
 type ViewMode = 'search' | 'processes' | 'neighborhood' | 'paths' | 'context';
 
@@ -29,6 +30,7 @@ export function GraphExplorer() {
 
   // State
   const [viewMode, setViewMode] = useState<ViewMode>('search');
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [searchType, setSearchType] = useState<string>('');
   const [searchProcessId, setSearchProcessId] = useState<string>('');
@@ -56,6 +58,9 @@ export function GraphExplorer() {
 
   // Ref for the search input to enable '/' shortcut
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const selectedCount = selectedNodes.size;
+  const selectedNodeIds = useMemo(() => Array.from(selectedNodes), [selectedNodes]);
 
   // Keyboard shortcut: '/' → focus search
   useKeyboardShortcuts([
@@ -90,6 +95,7 @@ export function GraphExplorer() {
       setProcesses(result.processes);
     } catch (err) {
       console.error('Failed to load processes:', err);
+      toast('Failed to load process overview', 'error');
     }
   };
 
@@ -189,8 +195,10 @@ export function GraphExplorer() {
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
+      toast('Copied to clipboard', 'success');
     } catch (err) {
       console.error('Failed to copy:', err);
+      toast('Clipboard copy failed', 'error');
     }
   };
 
@@ -221,8 +229,24 @@ export function GraphExplorer() {
   return (
     <div className="graph-explorer">
       <header className="explorer-header">
-        <h1>Graph Explorer</h1>
-        <p>Search, navigate, and extract context from your knowledge graphs</p>
+        <div className="explorer-header-copy">
+          <h1>Graph Explorer</h1>
+          <p>Search, navigate, and extract context from your knowledge graphs</p>
+        </div>
+        <div className="explorer-header-meta">
+          <div className="meta-chip">
+            <span className="meta-chip-label">Processes</span>
+            <strong>{processes.length}</strong>
+          </div>
+          <div className="meta-chip">
+            <span className="meta-chip-label">Selected</span>
+            <strong>{selectedCount}</strong>
+          </div>
+          <div className="meta-chip">
+            <span className="meta-chip-label">Last search</span>
+            <strong>{searchResults.length}</strong>
+          </div>
+        </div>
       </header>
 
       <div className="explorer-tabs">
@@ -269,6 +293,14 @@ export function GraphExplorer() {
         {/* Search View */}
         {viewMode === 'search' && (
           <div className="search-view">
+            <div className="search-intro">
+              <div>
+                <h2>Find the right node fast</h2>
+                <p>Filter by type or process, then build context from the nodes you select.</p>
+              </div>
+              <span className="shortcut-pill">/ focuses search</span>
+            </div>
+
             <div className="search-bar">
               <input
                 type="text"
@@ -303,8 +335,18 @@ export function GraphExplorer() {
             </div>
 
             <div className="search-results">
+              {!searchQuery && !isLoading && (
+                <div className="explorer-empty-state">
+                  <h3>Start with a keyword, node title, or decision</h3>
+                  <p>Try a process name, blocker, owner, or milestone. Search results stay selectable so you can build reusable context packs.</p>
+                </div>
+              )}
+
               {searchResults.length === 0 && searchQuery && !isLoading && (
-                <p className="no-results">No results found</p>
+                <div className="explorer-empty-state">
+                  <h3>No nodes matched “{searchQuery}”</h3>
+                  <p>Try broadening the query or clearing one of the filters above.</p>
+                </div>
               )}
 
               {searchResults.map((node) => (
@@ -324,7 +366,10 @@ export function GraphExplorer() {
                       title="Select for context"
                     />
                   </div>
-                  <p className="result-process">Process: {node.process_name}</p>
+                  <div className="result-meta">
+                    <p className="result-process">Process: {node.process_name}</p>
+                    <span className="result-node-id">{node.id}</span>
+                  </div>
                   {node.description && (
                     <p className="result-description">{node.description}</p>
                   )}
@@ -346,9 +391,9 @@ export function GraphExplorer() {
               ))}
             </div>
 
-            {selectedNodes.size > 0 && (
+            {selectedCount > 0 && (
               <div className="selection-bar">
-                <span>{selectedNodes.size} node(s) selected</span>
+                <span>{selectedCount} node(s) selected</span>
                 <button onClick={handleBuildContext}>
                   Build Context
                 </button>
@@ -553,7 +598,7 @@ export function GraphExplorer() {
         {viewMode === 'context' && (
           <div className="context-view">
             <div className="context-controls">
-              <span>{selectedNodes.size} node(s) selected</span>
+              <span>{selectedCount} node(s) selected</span>
               <select
                 value={contextFormat}
                 onChange={(e) => setContextFormat(e.target.value as 'markdown' | 'text')}
@@ -563,7 +608,7 @@ export function GraphExplorer() {
               </select>
               <button
                 onClick={handleBuildContext}
-                disabled={selectedNodes.size === 0 || isLoading}
+                disabled={selectedCount === 0 || isLoading}
               >
                 {isLoading ? 'Building...' : 'Build Context'}
               </button>
@@ -592,11 +637,11 @@ export function GraphExplorer() {
               </div>
             )}
 
-            {selectedNodes.size > 0 && !contextResult && (
+            {selectedCount > 0 && !contextResult && (
               <div className="selected-nodes">
                 <h4>Selected Nodes:</h4>
                 <ul>
-                  {Array.from(selectedNodes).map((id) => (
+                  {selectedNodeIds.map((id) => (
                     <li key={id}>
                       {id}
                       <button onClick={() => toggleNodeSelection(id)}>×</button>
