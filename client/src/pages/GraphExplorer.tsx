@@ -23,11 +23,18 @@ interface SearchResultNode extends ProcessNode {
   process_description: string | null;
 }
 
+const VIEW_DETAILS: Array<{ id: ViewMode; label: string; description: string }> = [
+  { id: 'search', label: 'Search', description: 'Find nodes by title, description, or content.' },
+  { id: 'processes', label: 'Processes', description: 'Browse process health and export context packs.' },
+  { id: 'neighborhood', label: 'Neighborhood', description: 'Inspect local graph structure around a node.' },
+  { id: 'paths', label: 'Find Paths', description: 'Trace how two nodes connect through the graph.' },
+  { id: 'context', label: 'Context Builder', description: 'Assemble a reusable context bundle from selected nodes.' },
+];
+
 export function GraphExplorer() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // State
   const [viewMode, setViewMode] = useState<ViewMode>('search');
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [searchType, setSearchType] = useState<string>('');
@@ -36,28 +43,22 @@ export function GraphExplorer() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Processes summary
   const [processes, setProcesses] = useState<ProcessSummary[]>([]);
 
-  // Neighborhood view
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [neighborhoodDepth, setNeighborhoodDepth] = useState(2);
   const [neighborhood, setNeighborhood] = useState<NodeNeighborhood | null>(null);
 
-  // Paths view
   const [sourceNodeId, setSourceNodeId] = useState<string>('');
   const [targetNodeId, setTargetNodeId] = useState<string>('');
   const [pathResults, setPathResults] = useState<PathResult | null>(null);
 
-  // Context builder
   const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
   const [contextResult, setContextResult] = useState<ContextBuildResult | null>(null);
   const [contextFormat, setContextFormat] = useState<'markdown' | 'text'>('markdown');
 
-  // Ref for the search input to enable '/' shortcut
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Keyboard shortcut: '/' → focus search
   useKeyboardShortcuts([
     {
       key: '/',
@@ -70,12 +71,10 @@ export function GraphExplorer() {
     },
   ]);
 
-  // Load processes on mount
   useEffect(() => {
     loadProcesses();
   }, []);
 
-  // Handle URL search param
   useEffect(() => {
     const q = searchParams.get('q');
     if (q && q !== searchQuery) {
@@ -175,7 +174,7 @@ export function GraphExplorer() {
   };
 
   const toggleNodeSelection = (nodeId: string) => {
-    setSelectedNodes(prev => {
+    setSelectedNodes((prev) => {
       const next = new Set(prev);
       if (next.has(nodeId)) {
         next.delete(nodeId);
@@ -210,52 +209,63 @@ export function GraphExplorer() {
 
   const getNodeTypeColor = (type: string) => {
     switch (type) {
-      case 'start': return '#34d399';    // --success
-      case 'task': return '#6366f1';     // --accent
-      case 'decision': return '#fbbf24'; // --warning
-      case 'end': return '#f87171';      // --danger
-      default: return '#52525b';         // --text-tertiary
+      case 'start': return '#34d399';
+      case 'task': return '#6366f1';
+      case 'decision': return '#fbbf24';
+      case 'end': return '#f87171';
+      default: return '#52525b';
     }
   };
+
+  const activeView = VIEW_DETAILS.find((view) => view.id === viewMode) ?? VIEW_DETAILS[0];
+  const totalNodes = processes.reduce((sum, process) => sum + process.node_count, 0);
+  const totalEdges = processes.reduce((sum, process) => sum + process.edge_count, 0);
+  const totalProjects = processes.reduce((sum, process) => sum + process.project_count, 0);
+  const selectedProcessName = searchProcessId
+    ? processes.find((process) => process.id === searchProcessId)?.name ?? 'Filtered'
+    : 'All processes';
 
   return (
     <div className="graph-explorer">
       <header className="explorer-header">
-        <h1>Graph Explorer</h1>
-        <p>Search, navigate, and extract context from your knowledge graphs</p>
+        <div>
+          <span className="explorer-eyebrow">Knowledge graph workspace</span>
+          <h1>Graph Explorer</h1>
+          <p>Search, navigate, and extract context from your process graph without leaving the dashboard.</p>
+        </div>
+
+        <div className="explorer-hero-grid">
+          <div className="explorer-hero-card explorer-hero-card-primary">
+            <span className="hero-card-label">Current mode</span>
+            <strong>{activeView.label}</strong>
+            <p>{activeView.description}</p>
+          </div>
+
+          <div className="explorer-hero-card">
+            <span className="hero-card-label">Coverage</span>
+            <strong>{processes.length} processes</strong>
+            <p>{totalNodes} nodes · {totalEdges} edges · {totalProjects} projects linked</p>
+          </div>
+
+          <div className="explorer-hero-card">
+            <span className="hero-card-label">Selection tray</span>
+            <strong>{selectedNodes.size} node{selectedNodes.size === 1 ? '' : 's'} ready</strong>
+            <p>Search results and neighborhood nodes can be bundled straight into context.</p>
+          </div>
+        </div>
       </header>
 
       <div className="explorer-tabs">
-        <button
-          className={`tab ${viewMode === 'search' ? 'active' : ''}`}
-          onClick={() => setViewMode('search')}
-        >
-          Search
-        </button>
-        <button
-          className={`tab ${viewMode === 'processes' ? 'active' : ''}`}
-          onClick={() => setViewMode('processes')}
-        >
-          Processes
-        </button>
-        <button
-          className={`tab ${viewMode === 'neighborhood' ? 'active' : ''}`}
-          onClick={() => setViewMode('neighborhood')}
-        >
-          Neighborhood
-        </button>
-        <button
-          className={`tab ${viewMode === 'paths' ? 'active' : ''}`}
-          onClick={() => setViewMode('paths')}
-        >
-          Find Paths
-        </button>
-        <button
-          className={`tab ${viewMode === 'context' ? 'active' : ''}`}
-          onClick={() => setViewMode('context')}
-        >
-          Context Builder
-        </button>
+        {VIEW_DETAILS.map((view) => (
+          <button
+            key={view.id}
+            className={`tab ${viewMode === view.id ? 'active' : ''}`}
+            onClick={() => setViewMode(view.id)}
+          >
+            <span>{view.label}</span>
+            <small>{view.description}</small>
+          </button>
+        ))}
       </div>
 
       {error && (
@@ -266,45 +276,83 @@ export function GraphExplorer() {
       )}
 
       <main className="explorer-content">
-        {/* Search View */}
         {viewMode === 'search' && (
           <div className="search-view">
-            <div className="search-bar">
-              <input
-                type="text"
-                ref={searchInputRef}
-                placeholder="Search nodes by title, description, or content..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              />
-              <select
-                value={searchType}
-                onChange={(e) => setSearchType(e.target.value)}
-              >
-                <option value="">All types</option>
-                <option value="start">Start</option>
-                <option value="task">Task</option>
-                <option value="decision">Decision</option>
-                <option value="end">End</option>
-              </select>
-              <select
-                value={searchProcessId}
-                onChange={(e) => setSearchProcessId(e.target.value)}
-              >
-                <option value="">All processes</option>
-                {processes.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-              <button onClick={() => handleSearch()} disabled={isLoading}>
-                {isLoading ? 'Searching...' : 'Search'}
-              </button>
+            <div className="panel-shell search-shell">
+              <div className="section-heading">
+                <div>
+                  <span className="section-kicker">Graph lookup</span>
+                  <h2>Query the graph fast</h2>
+                </div>
+                <div className="section-badge-row">
+                  <span className="info-chip">/ focuses search</span>
+                  <span className="info-chip">Up to 50 results</span>
+                </div>
+              </div>
+
+              <div className="search-bar">
+                <input
+                  type="text"
+                  ref={searchInputRef}
+                  placeholder="Search nodes by title, description, or content..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                />
+                <select
+                  value={searchType}
+                  onChange={(e) => setSearchType(e.target.value)}
+                >
+                  <option value="">All types</option>
+                  <option value="start">Start</option>
+                  <option value="task">Task</option>
+                  <option value="decision">Decision</option>
+                  <option value="end">End</option>
+                </select>
+                <select
+                  value={searchProcessId}
+                  onChange={(e) => setSearchProcessId(e.target.value)}
+                >
+                  <option value="">All processes</option>
+                  {processes.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+                <button onClick={() => handleSearch()} disabled={isLoading}>
+                  {isLoading ? 'Searching...' : 'Search'}
+                </button>
+              </div>
+
+              <div className="search-summary-row">
+                <div className="mini-stat-card">
+                  <span className="mini-stat-label">Results</span>
+                  <strong>{searchResults.length}</strong>
+                </div>
+                <div className="mini-stat-card">
+                  <span className="mini-stat-label">Type filter</span>
+                  <strong>{searchType || 'All nodes'}</strong>
+                </div>
+                <div className="mini-stat-card">
+                  <span className="mini-stat-label">Process scope</span>
+                  <strong>{selectedProcessName}</strong>
+                </div>
+              </div>
             </div>
 
             <div className="search-results">
+              {searchResults.length === 0 && !searchQuery && !isLoading && (
+                <div className="empty-state-card">
+                  <span className="empty-state-icon">⌘</span>
+                  <h3>Start with a graph search</h3>
+                  <p>Look up a task, decision, milestone, or process phrase to jump into the knowledge graph.</p>
+                </div>
+              )}
+
               {searchResults.length === 0 && searchQuery && !isLoading && (
-                <p className="no-results">No results found</p>
+                <div className="empty-state-card compact">
+                  <h3>No results found</h3>
+                  <p>Try a broader keyword, remove filters, or switch to the processes view.</p>
+                </div>
               )}
 
               {searchResults.map((node) => (
@@ -360,13 +408,25 @@ export function GraphExplorer() {
           </div>
         )}
 
-        {/* Processes View */}
         {viewMode === 'processes' && (
           <div className="processes-view">
-            <h2>Available Processes</h2>
+            <div className="section-heading">
+              <div>
+                <span className="section-kicker">Process inventory</span>
+                <h2>Available Processes</h2>
+              </div>
+              <div className="section-badge-row">
+                <span className="info-chip">{processes.length} loaded</span>
+                <span className="info-chip">One-click exports</span>
+              </div>
+            </div>
+
             <div className="processes-grid">
               {processes.map((process) => (
                 <div key={process.id} className="process-card">
+                  <div className="process-card-header">
+                    <span className="process-card-chip">Process</span>
+                  </div>
                   <h3>{process.name}</h3>
                   {process.description && (
                     <p className="process-description">{process.description}</p>
@@ -391,43 +451,63 @@ export function GraphExplorer() {
                 </div>
               ))}
             </div>
+
+            {processes.length === 0 && (
+              <div className="empty-state-card compact">
+                <h3>No processes available yet</h3>
+                <p>Once processes are loaded, this view becomes the quick launch pad for editing and exports.</p>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Neighborhood View */}
         {viewMode === 'neighborhood' && (
           <div className="neighborhood-view">
-            <div className="neighborhood-controls">
-              <label>
-                Node ID:
-                <input
-                  type="text"
-                  value={selectedNodeId || ''}
-                  onChange={(e) => setSelectedNodeId(e.target.value)}
-                  placeholder="Enter node ID"
-                />
-              </label>
-              <label>
-                Depth:
-                <input
-                  type="number"
-                  min={1}
-                  max={5}
-                  value={neighborhoodDepth}
-                  onChange={(e) => setNeighborhoodDepth(parseInt(e.target.value) || 1)}
-                />
-              </label>
-              <button
-                onClick={() => selectedNodeId && handleViewNeighborhood(selectedNodeId)}
-                disabled={!selectedNodeId || isLoading}
-              >
-                {isLoading ? 'Loading...' : 'Explore'}
-              </button>
+            <div className="panel-shell">
+              <div className="section-heading">
+                <div>
+                  <span className="section-kicker">Local structure</span>
+                  <h2>Neighborhood Explorer</h2>
+                </div>
+                <div className="section-badge-row">
+                  <span className="info-chip">Depth 1–5</span>
+                  <span className="info-chip">Selection-aware</span>
+                </div>
+              </div>
+
+              <div className="neighborhood-controls">
+                <label>
+                  Node ID:
+                  <input
+                    type="text"
+                    value={selectedNodeId || ''}
+                    onChange={(e) => setSelectedNodeId(e.target.value)}
+                    placeholder="Enter node ID"
+                  />
+                </label>
+                <label>
+                  Depth:
+                  <input
+                    type="number"
+                    min={1}
+                    max={5}
+                    value={neighborhoodDepth}
+                    onChange={(e) => setNeighborhoodDepth(parseInt(e.target.value) || 1)}
+                  />
+                </label>
+                <button
+                  onClick={() => selectedNodeId && handleViewNeighborhood(selectedNodeId)}
+                  disabled={!selectedNodeId || isLoading}
+                >
+                  {isLoading ? 'Loading...' : 'Explore'}
+                </button>
+              </div>
             </div>
 
             {neighborhood && (
               <div className="neighborhood-result">
                 <div className="center-node">
+                  <span className="section-kicker">Center node</span>
                   <h3>
                     <span
                       className="node-type-badge"
@@ -469,10 +549,10 @@ export function GraphExplorer() {
                   {neighborhood.edges.map((edge) => {
                     const sourceNode = neighborhood.center.id === edge.source_node_id
                       ? neighborhood.center
-                      : neighborhood.neighbors.find(n => n.id === edge.source_node_id);
+                      : neighborhood.neighbors.find((n) => n.id === edge.source_node_id);
                     const targetNode = neighborhood.center.id === edge.target_node_id
                       ? neighborhood.center
-                      : neighborhood.neighbors.find(n => n.id === edge.target_node_id);
+                      : neighborhood.neighbors.find((n) => n.id === edge.target_node_id);
 
                     return (
                       <div key={edge.id} className="edge-item">
@@ -486,37 +566,56 @@ export function GraphExplorer() {
                 </div>
               </div>
             )}
+
+            {!neighborhood && !isLoading && (
+              <div className="empty-state-card compact">
+                <h3>Pick a node to explore</h3>
+                <p>Paste a node ID or jump here from search results to inspect nearby edges and neighbors.</p>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Paths View */}
         {viewMode === 'paths' && (
           <div className="paths-view">
-            <div className="paths-controls">
-              <label>
-                Source Node ID:
-                <input
-                  type="text"
-                  value={sourceNodeId}
-                  onChange={(e) => setSourceNodeId(e.target.value)}
-                  placeholder="Enter source node ID"
-                />
-              </label>
-              <label>
-                Target Node ID:
-                <input
-                  type="text"
-                  value={targetNodeId}
-                  onChange={(e) => setTargetNodeId(e.target.value)}
-                  placeholder="Enter target node ID"
-                />
-              </label>
-              <button
-                onClick={handleFindPaths}
-                disabled={!sourceNodeId || !targetNodeId || isLoading}
-              >
-                {isLoading ? 'Finding...' : 'Find Paths'}
-              </button>
+            <div className="panel-shell">
+              <div className="section-heading">
+                <div>
+                  <span className="section-kicker">Route tracing</span>
+                  <h2>Find Paths</h2>
+                </div>
+                <div className="section-badge-row">
+                  <span className="info-chip">Max 10 paths</span>
+                  <span className="info-chip">Useful for dependency checks</span>
+                </div>
+              </div>
+
+              <div className="paths-controls">
+                <label>
+                  Source Node ID:
+                  <input
+                    type="text"
+                    value={sourceNodeId}
+                    onChange={(e) => setSourceNodeId(e.target.value)}
+                    placeholder="Enter source node ID"
+                  />
+                </label>
+                <label>
+                  Target Node ID:
+                  <input
+                    type="text"
+                    value={targetNodeId}
+                    onChange={(e) => setTargetNodeId(e.target.value)}
+                    placeholder="Enter target node ID"
+                  />
+                </label>
+                <button
+                  onClick={handleFindPaths}
+                  disabled={!sourceNodeId || !targetNodeId || isLoading}
+                >
+                  {isLoading ? 'Finding...' : 'Find Paths'}
+                </button>
+              </div>
             </div>
 
             {pathResults && (
@@ -546,35 +645,55 @@ export function GraphExplorer() {
                 ))}
               </div>
             )}
+
+            {!pathResults && !isLoading && (
+              <div className="empty-state-card compact">
+                <h3>No path query running</h3>
+                <p>Set a start and end node to uncover how information flows across the graph.</p>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Context Builder View */}
+
         {viewMode === 'context' && (
           <div className="context-view">
-            <div className="context-controls">
-              <span>{selectedNodes.size} node(s) selected</span>
-              <select
-                value={contextFormat}
-                onChange={(e) => setContextFormat(e.target.value as 'markdown' | 'text')}
-              >
-                <option value="markdown">Markdown</option>
-                <option value="text">Plain Text</option>
-              </select>
-              <button
-                onClick={handleBuildContext}
-                disabled={selectedNodes.size === 0 || isLoading}
-              >
-                {isLoading ? 'Building...' : 'Build Context'}
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedNodes(new Set());
-                  setContextResult(null);
-                }}
-              >
-                Clear
-              </button>
+            <div className="panel-shell">
+              <div className="section-heading">
+                <div>
+                  <span className="section-kicker">Context assembly</span>
+                  <h2>Build a reusable context bundle</h2>
+                </div>
+                <div className="section-badge-row">
+                  <span className="info-chip">{selectedNodes.size} selected</span>
+                  <span className="info-chip">Markdown or plain text</span>
+                </div>
+              </div>
+
+              <div className="context-controls">
+                <span>{selectedNodes.size} node(s) selected</span>
+                <select
+                  value={contextFormat}
+                  onChange={(e) => setContextFormat(e.target.value as 'markdown' | 'text')}
+                >
+                  <option value="markdown">Markdown</option>
+                  <option value="text">Plain Text</option>
+                </select>
+                <button
+                  onClick={handleBuildContext}
+                  disabled={selectedNodes.size === 0 || isLoading}
+                >
+                  {isLoading ? 'Building...' : 'Build Context'}
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedNodes(new Set());
+                    setContextResult(null);
+                  }}
+                >
+                  Clear
+                </button>
+              </div>
             </div>
 
             {contextResult && (
@@ -603,6 +722,13 @@ export function GraphExplorer() {
                     </li>
                   ))}
                 </ul>
+              </div>
+            )}
+
+            {selectedNodes.size === 0 && !contextResult && !isLoading && (
+              <div className="empty-state-card compact">
+                <h3>No nodes selected yet</h3>
+                <p>Select nodes from search or neighborhood results, then build a context pack here.</p>
               </div>
             )}
           </div>
