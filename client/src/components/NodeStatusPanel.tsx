@@ -22,6 +22,7 @@ export default function NodeStatusPanel({ node, onUpdate, onClose }: Props) {
   const [formData, setFormData] = useState<Record<string, unknown>>(node.form_data || {});
   const [notes, setNotes] = useState(node.notes || '');
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setStatus(node.project_status || 'not_started');
@@ -29,6 +30,7 @@ export default function NodeStatusPanel({ node, onUpdate, onClose }: Props) {
     setFormData(node.form_data || {});
     setNotes(node.notes || '');
     setValidationError(null);
+    setSaving(false);
   }, [node]);
 
   const formFields: FormField[] = node.form_schema?.fields || [];
@@ -36,6 +38,7 @@ export default function NodeStatusPanel({ node, onUpdate, onClose }: Props) {
   const handleSave = () => {
     if (!node.status_id) return;
     setValidationError(null);
+    setSaving(true);
     onUpdate(node.status_id, {
       status,
       decision_result: decisionResult || undefined,
@@ -47,6 +50,7 @@ export default function NodeStatusPanel({ node, onUpdate, onClose }: Props) {
   const handleStartTask = () => {
     if (!node.status_id) return;
     setValidationError(null);
+    setSaving(true);
     onUpdate(node.status_id, { status: 'in_progress' });
   };
 
@@ -57,6 +61,7 @@ export default function NodeStatusPanel({ node, onUpdate, onClose }: Props) {
       return;
     }
     setValidationError(null);
+    setSaving(true);
     onUpdate(node.status_id, {
       status: 'complete',
       decision_result: decisionResult || undefined,
@@ -197,17 +202,17 @@ export default function NodeStatusPanel({ node, onUpdate, onClose }: Props) {
 
         <div className="nsp-actions">
           {status === 'not_started' && (
-            <button className="btn btn-primary" onClick={handleStartTask}>
-              Start Task
+            <button className="btn btn-primary" onClick={handleStartTask} disabled={saving}>
+              {saving ? 'Saving…' : 'Start Task'}
             </button>
           )}
           {status === 'in_progress' && (
             <>
-              <button className="btn btn-success" onClick={handleCompleteTask}>
-                ✓ Complete Task
+              <button className="btn btn-success" onClick={handleCompleteTask} disabled={saving}>
+                {saving ? 'Saving…' : '✓ Complete Task'}
               </button>
-              <button className="btn btn-secondary" onClick={handleSave}>
-                Save Progress
+              <button className="btn btn-secondary" onClick={handleSave} disabled={saving}>
+                {saving ? 'Saving…' : 'Save Progress'}
               </button>
             </>
           )}
