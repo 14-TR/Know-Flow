@@ -104,6 +104,7 @@ export default function ProjectTracker() {
       setEdges(flowEdges);
     } catch (error) {
       console.error('Failed to load project:', error);
+      toast('Failed to load project. Please refresh and try again.', 'error');
     } finally {
       setLoading(false);
     }
@@ -139,8 +140,12 @@ export default function ProjectTracker() {
         const updatedNode = project.nodes.find((n) => n.id === selectedNode.id);
         if (updatedNode) setSelectedNode(updatedNode);
       }
+
+      const statusLabel = updates.status ? updates.status.replace('_', ' ') : 'saved';
+      toast(`Node ${statusLabel}`, 'success');
     } catch (error) {
       console.error('Failed to update status:', error);
+      toast('Failed to save changes. Please try again.', 'error');
     }
   };
 
