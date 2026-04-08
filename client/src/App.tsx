@@ -14,6 +14,7 @@ const ProjectList = lazy(() => import('./pages/ProjectList'));
 const ProjectTracker = lazy(() => import('./pages/ProjectTracker'));
 const Calendar = lazy(() => import('./pages/Calendar'));
 const DatabaseViewer = lazy(() => import('./pages/DatabaseViewer'));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
 const GraphExplorer = lazy(() => import('./pages/GraphExplorer').then((m) => ({ default: m.GraphExplorer })));
 
 export default function App() {
@@ -51,9 +52,11 @@ export default function App() {
     { keys: ['g', 'p'], description: 'Go to Processes', group: 'Navigation', handler: () => navigate('/') },
     { keys: ['g', 'j'], description: 'Go to Projects', group: 'Navigation', handler: () => navigate('/projects') },
     { keys: ['g', 'e'], description: 'Go to Explorer', group: 'Navigation', handler: () => navigate('/explorer') },
+    { keys: ['g', 'd'], description: 'Go to Dashboard', group: 'Navigation', handler: () => navigate('/dashboard') },
   ]);
 
   const navLinks = [
+    { to: '/dashboard', label: 'Dashboard', match: (p: string) => p === '/dashboard' },
     { to: '/', label: 'Processes', match: (p: string) => p === '/' },
     { to: '/projects', label: 'Projects', match: (p: string) => p.startsWith('/projects') || p.startsWith('/project/') },
     { to: '/database', label: 'Database', match: (p: string) => p === '/database' },
@@ -126,6 +129,7 @@ export default function App() {
           <Route path="/project/:id/calendar" element={<Calendar />} />
           <Route path="/database" element={<DatabaseViewer />} />
           <Route path="/explorer" element={<GraphExplorer />} />
+          <Route path="/dashboard" element={<Dashboard />} />
         </Routes>
       </Suspense>
     </div>
