@@ -178,6 +178,12 @@ export default function ProjectTracker() {
     return Math.round((completed / project.nodes.length) * 100);
   };
 
+  const getStatusLabel = (status: string) =>
+    status
+      .split('_')
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+
   if (loading) {
     return <PageSpinner />;
   }
@@ -196,6 +202,30 @@ export default function ProjectTracker() {
   }
 
   const progress = getProgress();
+  const briefStats = projectBrief?.stats;
+  const currentNodes = project?.currentNodes || [];
+  const trackerHighlights = [
+    {
+      label: 'Completed',
+      value: briefStats ? `${briefStats.completed}/${briefStats.total}` : '—',
+      tone: 'success',
+    },
+    {
+      label: 'In Progress',
+      value: briefStats ? `${briefStats.in_progress}` : '—',
+      tone: 'accent',
+    },
+    {
+      label: 'Not Started',
+      value: briefStats ? `${briefStats.not_started}` : '—',
+      tone: 'muted',
+    },
+    {
+      label: 'Watch-outs',
+      value: projectBrief?.blockers.length ? `${projectBrief.blockers.length}` : '0',
+      tone: projectBrief?.blockers.length ? 'warning' : 'muted',
+    },
+  ];
 
   return (
     <>
@@ -243,21 +273,51 @@ export default function ProjectTracker() {
                 </div>
                 <div className="tracker-brief-card">
                   <div className="tracker-brief-header">
-                    <span className="tracker-brief-kicker">Project brief</span>
+                    <div>
+                      <span className="tracker-brief-kicker">Project brief</span>
+                      <p className="tracker-brief-summary">
+                        {projectBrief?.summary || 'No brief yet.'}
+                      </p>
+                    </div>
                     {briefLoading && <span className="tracker-brief-loading">Refreshing…</span>}
                   </div>
-                  <p className="tracker-brief-summary">
-                    {projectBrief?.summary || 'No brief yet.'}
-                  </p>
+
+                  <div className="tracker-highlight-grid">
+                    {trackerHighlights.map((highlight) => (
+                      <div
+                        key={highlight.label}
+                        className={`tracker-highlight-card tracker-highlight-${highlight.tone}`}
+                      >
+                        <span>{highlight.label}</span>
+                        <strong>{highlight.value}</strong>
+                      </div>
+                    ))}
+                  </div>
+
                   {projectBrief?.suggested_next_action && (
-                    <div className="tracker-brief-next">
+                    <div className="tracker-brief-next tracker-glass-section">
                       <span className="tracker-brief-section-label">Next best action</span>
                       <strong>{projectBrief.suggested_next_action.title}</strong>
                       <span>{projectBrief.suggested_next_action.rationale}</span>
                     </div>
                   )}
+
+                  {!!currentNodes.length && (
+                    <div className="tracker-brief-list-block tracker-glass-section">
+                      <span className="tracker-brief-section-label">Current focus</span>
+                      <ul className="tracker-chip-list">
+                        {currentNodes.map((node) => (
+                          <li key={node.node_id} className="tracker-focus-chip">
+                            <strong>{node.node_title}</strong>
+                            <span>{getStatusLabel(node.status)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   {!!projectBrief?.blockers.length && (
-                    <div className="tracker-brief-list-block">
+                    <div className="tracker-brief-list-block tracker-glass-section">
                       <span className="tracker-brief-section-label">Watch-outs</span>
                       <ul>
                         {projectBrief.blockers.map((blocker) => (
@@ -266,8 +326,9 @@ export default function ProjectTracker() {
                       </ul>
                     </div>
                   )}
+
                   {!!projectBrief?.upcoming.length && (
-                    <div className="tracker-brief-list-block">
+                    <div className="tracker-brief-list-block tracker-glass-section">
                       <span className="tracker-brief-section-label">Upcoming</span>
                       <ul>
                         {projectBrief.upcoming.map((item) => (
