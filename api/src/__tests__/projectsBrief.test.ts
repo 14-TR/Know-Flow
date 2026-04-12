@@ -66,6 +66,7 @@ describe('Project brief route', () => {
             notes: null,
             started_at: null,
             completed_at: null,
+            due_date: null,
           },
           {
             node_id: 'node-3',
@@ -77,6 +78,7 @@ describe('Project brief route', () => {
             notes: null,
             started_at: null,
             completed_at: null,
+            due_date: null,
           },
           {
             node_id: 'node-1',
@@ -88,6 +90,7 @@ describe('Project brief route', () => {
             notes: null,
             started_at: null,
             completed_at: null,
+            due_date: null,
           },
         ],
         rowCount: 3,
@@ -128,6 +131,7 @@ describe('Project brief route', () => {
             notes: null,
             started_at: null,
             completed_at: null,
+            due_date: null,
           },
           {
             node_id: 'node-4',
@@ -139,6 +143,7 @@ describe('Project brief route', () => {
             notes: null,
             started_at: null,
             completed_at: null,
+            due_date: null,
           },
           {
             node_id: 'node-1',
@@ -150,6 +155,7 @@ describe('Project brief route', () => {
             notes: null,
             started_at: null,
             completed_at: null,
+            due_date: null,
           },
         ],
         rowCount: 3,
@@ -169,6 +175,63 @@ describe('Project brief route', () => {
       (res.body as { suggested_next_action: { title: string } }).suggested_next_action.title
     ).toBe('Choose deployment path');
   });
+
+  it('surfaces overdue and next due dates inside the brief', async () => {
+    vi.mocked(db.query)
+      .mockResolvedValueOnce({
+        rows: [{ id: 'proj-2', name: 'Beta', process_id: 'proc-2', status: 'active' }],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            node_id: 'node-10',
+            title: 'Draft statement of work',
+            type: 'task',
+            status: 'in_progress',
+            decision_result: null,
+            assigned_to: 'TR',
+            notes: null,
+            started_at: null,
+            completed_at: null,
+            due_date: '2026-04-10',
+          },
+          {
+            node_id: 'node-11',
+            title: 'Review estimate',
+            type: 'task',
+            status: 'not_started',
+            decision_result: null,
+            assigned_to: null,
+            notes: null,
+            started_at: null,
+            completed_at: null,
+            due_date: '2026-04-14',
+          },
+        ],
+        rowCount: 2,
+      })
+      .mockResolvedValueOnce({
+        rows: [],
+        rowCount: 0,
+      });
+
+    const res = await request(app, 'GET', '/api/projects/proj-2/brief');
+
+    expect(res.status).toBe(200);
+    expect((res.body as { summary: string }).summary).toContain('1 overdue');
+    expect((res.body as { blockers: string[] }).blockers).toContain(
+      'Overdue: Draft statement of work (due Apr 10)'
+    );
+    expect((res.body as { upcoming: string[] }).upcoming).toEqual([
+      'Catch up Apr 10 — Draft statement of work',
+      'Due Apr 14 — Review estimate',
+    ]);
+    expect(
+      (res.body as { stats: { overdue: number; next_due_date: string | null } }).stats
+    ).toMatchObject({ overdue: 1, next_due_date: '2026-04-10' });
+  });
+
 
   it('returns 404 when the project does not exist', async () => {
     vi.mocked(db.query).mockResolvedValueOnce({ rows: [], rowCount: 0 });

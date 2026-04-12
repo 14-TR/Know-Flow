@@ -33,8 +33,23 @@ const nodeTypes = {
   project: ProjectNode,
 };
 
+
 const PROJECT_STATUSES = ['active', 'completed', 'archived'] as const;
 type ProjectStatus = typeof PROJECT_STATUSES[number];
+
+function formatBriefDate(date: string | null | undefined): string {
+  if (!date) return '—';
+
+  const parsed = new Date(`${date}T12:00:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return date;
+  }
+
+  return parsed.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
+}
 
 export default function ProjectTracker() {
   const { id } = useParams<{ id: string }>();
@@ -216,9 +231,11 @@ export default function ProjectTracker() {
       tone: 'accent',
     },
     {
-      label: 'Not Started',
-      value: briefStats ? `${briefStats.not_started}` : '—',
-      tone: 'muted',
+      label: briefStats?.overdue ? 'Overdue' : 'Next Due',
+      value: briefStats?.overdue
+        ? `${briefStats.overdue}`
+        : formatBriefDate(briefStats?.next_due_date),
+      tone: briefStats?.overdue ? 'warning' : 'muted',
     },
     {
       label: 'Watch-outs',

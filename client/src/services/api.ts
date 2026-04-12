@@ -106,6 +106,8 @@ export interface ProjectBrief {
     not_started: number;
     skipped: number;
     progress_percent: number;
+    overdue: number;
+    next_due_date: string | null;
   };
 }
 

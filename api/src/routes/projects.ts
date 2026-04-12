@@ -12,6 +12,7 @@ interface ProjectBriefRow {
   notes: string | null;
   started_at: string | null;
   completed_at: string | null;
+  due_date: string | null;
 }
 
 interface ProjectBrief {
@@ -31,12 +32,27 @@ interface ProjectBrief {
     not_started: number;
     skipped: number;
     progress_percent: number;
+    overdue: number;
+    next_due_date: string | null;
   };
 }
 
 interface ProjectBriefEdgeRow {
   source_node_id: string;
   target_node_id: string;
+}
+
+function formatDueLabel(dueDate: string): string {
+  const parsed = new Date(`${dueDate}T12:00:00`);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return dueDate;
+  }
+
+  return parsed.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
 }
 
 function buildProjectBrief(
@@ -77,8 +93,30 @@ function buildProjectBrief(
     });
   });
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const scheduledPendingNodes = normalized
+    .filter(
+      (row) =>
+        !!row.due_date && row.status !== 'complete' && row.status !== 'skipped'
+    )
+    .map((row) => {
+      const due = new Date(`${row.due_date}T12:00:00`);
+      return {
+        ...row,
+        due,
+      };
+    })
+    .filter((row) => !Number.isNaN(row.due.getTime()))
+    .sort((a, b) => a.due.getTime() - b.due.getTime());
+
+  const overdueNodes = scheduledPendingNodes.filter((row) => row.due.getTime() < today.getTime());
+  const nextDueNode = scheduledPendingNodes[0] ?? null;
+
   const blockers = Array.from(
     new Set([
+      ...overdueNodes.slice(0, 2).map((row) => `Overdue: ${row.title} (due ${formatDueLabel(row.due_date!)})`),
       ...normalized
         .filter(
           (row) =>
@@ -98,11 +136,17 @@ function buildProjectBrief(
   ).slice(0, 3);
 
   const upcoming = [
-    ...normalized
-      .filter((row) => row.status === 'in_progress')
+    ...scheduledPendingNodes
       .slice(0, 3)
+      .map((row) => `${row.due.getTime() < today.getTime() ? 'Catch up' : 'Due'} ${formatDueLabel(row.due_date!)} — ${row.title}`),
+    ...normalized
+      .filter((row) => row.status === 'in_progress' && !row.due_date)
+      .slice(0, 2)
       .map((row) => `Continue ${row.title}`),
-    ...readyNodes.slice(0, 3).map((row) => `Start ${row.title}`),
+    ...readyNodes
+      .filter((row) => !row.due_date)
+      .slice(0, 2)
+      .map((row) => `Start ${row.title}`),
   ].slice(0, 3);
 
   const decisionNode = normalized.find(
@@ -136,7 +180,11 @@ function buildProjectBrief(
 
   const summaryParts = [total > 0 ? `${completed}/${total} nodes complete` : 'No nodes in this project yet'];
 
-  if (inProgress > 0) {
+  if (overdueNodes.length > 0) {
+    summaryParts.push(`${overdueNodes.length} overdue`);
+  } else if (nextDueNode?.due_date) {
+    summaryParts.push(`next due ${formatDueLabel(nextDueNode.due_date)}`);
+  } else if (inProgress > 0) {
     summaryParts.push(`${inProgress} in progress`);
   } else if (readyNodes.length > 0) {
     summaryParts.push(`${readyNodes.length} ready to start`);
@@ -162,6 +210,8 @@ function buildProjectBrief(
       not_started: notStarted,
       skipped,
       progress_percent: progressPercent,
+      overdue: overdueNodes.length,
+      next_due_date: nextDueNode?.due_date ?? null,
     },
   };
 }
@@ -331,7 +381,8 @@ router.get('/:id/brief', async (req: Request, res: Response) => {
               pns.assigned_to,
               pns.notes,
               pns.started_at,
-              pns.completed_at
+              pns.completed_at,
+              pns.due_date
        FROM nodes n
        LEFT JOIN project_node_statuses pns
          ON pns.node_id = n.id AND pns.project_id = $1
