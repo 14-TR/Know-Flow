@@ -50,14 +50,25 @@ export default function NodeEditorPanel({ node, onUpdate, onDelete, onClose }: P
   };
 
   return (
-    <div className="panel node-editor">
+    <div className="panel node-editor command-center-panel">
       <div className="panel-header">
-        <h3>Edit Node</h3>
+        <div>
+          <span className="panel-kicker">Node inspector</span>
+          <h3>Edit Node</h3>
+        </div>
         <button className="btn btn-icon btn-secondary btn-sm" onClick={onClose}>
           ✕
         </button>
       </div>
       <div className="panel-content">
+        <div className="panel-hero panel-hero--node">
+          <span className="panel-hero__badge">{type}</span>
+          <div>
+            <strong>{title || 'Untitled node'}</strong>
+            <p>Configure the step details and any structured input fields for this part of the flow.</p>
+          </div>
+        </div>
+
         <div className="form-group">
           <label>Type</label>
           <select value={type} onChange={(e) => setType(e.target.value as ProcessNode['type'])}>
@@ -89,7 +100,10 @@ export default function NodeEditorPanel({ node, onUpdate, onDelete, onClose }: P
 
         <div className="form-group">
           <div className="nep-fields-header">
-            <span className="nep-fields-label">Form Fields</span>
+            <div>
+              <span className="nep-fields-label">Form Fields</span>
+              <p className="panel-section-hint">Add the structured inputs this step should collect.</p>
+            </div>
             <button className="btn btn-sm btn-secondary" onClick={addFormField}>
               + Add Field
             </button>

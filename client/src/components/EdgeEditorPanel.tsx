@@ -34,14 +34,25 @@ export default function EdgeEditorPanel({ edge, onUpdate, onDelete, onClose }: P
   };
 
   return (
-    <div className="panel node-editor">
+    <div className="panel node-editor command-center-panel">
       <div className="panel-header">
-        <h3>Edit Edge</h3>
+        <div>
+          <span className="panel-kicker">Connection inspector</span>
+          <h3>Edit Edge</h3>
+        </div>
         <button className="btn btn-icon btn-secondary btn-sm" onClick={onClose}>
           ✕
         </button>
       </div>
       <div className="panel-content">
+        <div className="panel-hero panel-hero--edge">
+          <span className="panel-hero__badge">Route</span>
+          <div>
+            <strong>{label || 'Unlabeled connection'}</strong>
+            <p>Define how this connection reads in the graph and when it should be taken.</p>
+          </div>
+        </div>
+
         <div className="form-group">
           <label>Label</label>
           <input
