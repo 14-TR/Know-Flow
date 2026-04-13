@@ -1,11 +1,130 @@
 /* ============================================
-   Process Editor — Apple Dark Mode
+   Process Editor — Apple Dark Command Center
    Uses CSS variables from styles/index.css
    ============================================ */
 
-/* ============================================
-   Node Type Color Accents (toolbar buttons)
-   ============================================ */
+.process-editor-shell {
+  background:
+    radial-gradient(circle at top left, rgba(99, 102, 241, 0.16), transparent 30%),
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.12), transparent 26%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.92) 0%, rgba(2, 6, 23, 0.98) 100%);
+}
+
+.process-command-bar,
+.command-actions-panel {
+  background: rgba(15, 23, 42, 0.82);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 20px 60px rgba(2, 6, 23, 0.4);
+}
+
+.process-command-bar {
+  min-width: 560px;
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.process-command-bar__header,
+.process-command-bar__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.process-command-bar__title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.toolbar-eyebrow,
+.panel-kicker {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-tertiary);
+}
+
+.toolbar-process-name {
+  padding: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  max-width: none;
+}
+
+.toolbar-status-cluster {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.toolbar-status-pill,
+.panel-hero__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.toolbar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.toolbar-section--status {
+  min-width: 160px;
+  align-items: flex-start;
+}
+
+.toolbar-selection-summary {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.toolbar-node-actions,
+.command-action-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.command-actions-panel {
+  padding: 0.85rem 0.95rem;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 34px;
+  background: linear-gradient(180deg, transparent, rgba(148, 163, 184, 0.3), transparent);
+  flex-shrink: 0;
+  margin: 0 0.2rem;
+}
+
+.toolbar-divider--horizontal {
+  width: 100%;
+  height: 1px;
+  margin: 0;
+  background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.28), transparent);
+}
 
 .btn-node-start {
   background: var(--success-dim);
@@ -51,42 +170,62 @@
   border-color: rgba(248, 113, 113, 0.5);
 }
 
-/* ============================================
-   Toolbar divider
-   ============================================ */
-
-.toolbar-divider {
-  width: 1px;
-  height: 24px;
-  background: var(--border);
-  flex-shrink: 0;
-  margin: 0 0.25rem;
-}
-
-/* ============================================
-   Process name chip in toolbar
-   ============================================ */
-
-.toolbar-process-name {
-  padding: 0.25rem 0.625rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  letter-spacing: -0.01em;
-  max-width: 200px;
+.command-center-panel {
+  width: 360px;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-/* ============================================
-   NodeEditorPanel — Form Field Builder
-   ============================================ */
+.command-center-panel .panel-header {
+  align-items: flex-start;
+}
 
-/* Form field card (each individual field in the builder) */
+.command-center-panel .panel-header h3 {
+  margin-top: 0.15rem;
+}
+
+.panel-hero {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.9rem;
+  margin-bottom: 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.78), rgba(15, 23, 42, 0.68));
+}
+
+.panel-hero--node .panel-hero__badge {
+  color: var(--accent-hover);
+  background: rgba(99, 102, 241, 0.14);
+}
+
+.panel-hero--edge .panel-hero__badge {
+  color: var(--warning);
+  background: rgba(251, 191, 36, 0.14);
+}
+
+.panel-hero strong {
+  display: block;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.panel-hero p,
+.panel-section-hint,
+.eep-hint {
+  font-size: 0.75rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.panel-section-hint {
+  margin-top: 0.2rem;
+}
+
 .nep-field-card {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
+  background: rgba(15, 23, 42, 0.76);
+  border: 1px solid rgba(148, 163, 184, 0.14);
   border-radius: var(--radius-md);
   padding: 0.75rem;
   margin-top: 0.625rem;
@@ -97,73 +236,53 @@
 }
 
 .nep-field-card:hover {
-  border-color: var(--border-strong);
+  border-color: rgba(148, 163, 184, 0.24);
+  transform: translateY(-1px);
 }
 
-/* Top row: field name input + delete button */
 .nep-field-row {
   display: flex;
   gap: 0.5rem;
   align-items: center;
 }
 
-.nep-field-row input {
+.nep-field-row input,
+.nep-field-meta input {
   flex: 1;
   min-width: 0;
 }
 
-/* Bottom row: label + type select */
 .nep-field-meta {
   display: flex;
   gap: 0.5rem;
   align-items: center;
 }
 
-.nep-field-meta input {
-  flex: 1;
-  min-width: 0;
-}
-
 .nep-type-select {
-  width: 100px;
+  width: 110px;
   flex-shrink: 0;
 }
 
-/* Select options input (comma-separated) */
 .nep-options-input {
   width: 100%;
   margin-top: 0.125rem;
 }
 
-/* Form fields header row: label + add button */
 .nep-fields-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 0.75rem;
   margin-bottom: 0.25rem;
 }
 
 .nep-fields-label {
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-secondary);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
-
-/* ============================================
-   EdgeEditorPanel — hint text
-   ============================================ */
-
-.eep-hint {
-  font-size: 0.6875rem;
-  color: var(--text-tertiary);
-  margin-top: 0.375rem;
-  line-height: 1.5;
-}
-
-/* ============================================
-   Form actions row (Save / Delete)
-   ============================================ */
 
 .panel-form-actions {
   display: flex;
@@ -173,47 +292,71 @@
   gap: 0.5rem;
 }
 
-/* ============================================
-   React Flow background override for editor
-   ============================================ */
-
 .react-flow__background pattern circle {
   fill: rgba(255, 255, 255, 0.06) !important;
 }
 
-/* ============================================
-   MiniMap in dark mode — node fill colors
-   ============================================ */
+.react-flow__minimap {
+  box-shadow: 0 16px 40px rgba(2, 6, 23, 0.35) !important;
+}
 
 .react-flow__minimap-node[style*="fill: rgb(52"] {
   fill: var(--success) !important;
 }
 
-/* ============================================
-   Responsive — mobile (max 480px)
-   ============================================ */
-
-@media (max-width: 480px) {
-  /* Compact process name in toolbar */
-  .toolbar-process-name {
-    max-width: 100px;
-    font-size: 0.75rem;
+@media (max-width: 900px) {
+  .process-command-bar {
+    min-width: min(92vw, 560px);
   }
 
-  /* Hide the layout toolbar label */
-  .toolbar-label {
+  .process-command-bar__header,
+  .process-command-bar__row {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .toolbar-status-cluster {
+    justify-content: flex-start;
+  }
+
+  .command-actions-panel {
+    min-width: 0;
+    width: min(92vw, 260px);
+  }
+}
+
+@media (max-width: 480px) {
+  .process-command-bar,
+  .command-actions-panel,
+  .command-center-panel {
+    width: calc(100vw - 1.5rem);
+    min-width: 0;
+  }
+
+  .toolbar-process-name {
+    font-size: 0.875rem;
+  }
+
+  .toolbar-node-actions,
+  .command-action-grid,
+  .panel-form-actions,
+  .nep-fields-header,
+  .nep-field-meta {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbar-divider,
+  .toolbar-divider--horizontal {
     display: none;
   }
 
-  /* Compact toolbar buttons */
-  .toolbar .btn-sm {
-    padding: 0.3rem 0.55rem;
-    font-size: 0.75rem;
+  .toolbar-section--status {
+    min-width: 0;
   }
 
-  /* NodeEditorPanel field meta: stack on very narrow screens */
-  .nep-field-meta {
-    flex-wrap: wrap;
+  .toolbar-selection-summary {
+    font-size: 0.8125rem;
   }
 
   .nep-type-select {

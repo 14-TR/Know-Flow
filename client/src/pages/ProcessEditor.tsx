@@ -530,9 +530,15 @@ function ProcessEditorInner() {
     );
   }
 
+  const selectionSummary = selectedNode
+    ? `${selectedNode.type} node selected`
+    : selectedEdge
+      ? 'Connection selected'
+      : 'Canvas ready';
+
   return (
     <div className="main-content">
-      <div className="graph-container">
+      <div className="graph-container process-editor-shell">
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -556,74 +562,106 @@ function ProcessEditorInner() {
           <Background variant={BackgroundVariant.Dots} gap={20} />
 
           <Panel position="top-left">
-            <div className="panel toolbar">
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={() => navigate('/')}
-              >
-                &larr; Back
-              </button>
-              <span className="toolbar-process-name">{process.name}</span>
-              <div className="toolbar-divider" />
-              <button
-                className="btn btn-sm btn-node-start"
-                onClick={() => handleAddNode('start')}
-              >
-                + Start
-              </button>
-              <button
-                className="btn btn-sm btn-node-task"
-                onClick={() => handleAddNode('task')}
-              >
-                + Task
-              </button>
-              <button
-                className="btn btn-sm btn-node-decision"
-                onClick={() => handleAddNode('decision')}
-              >
-                + Decision
-              </button>
-              <button
-                className="btn btn-sm btn-node-end"
-                onClick={() => handleAddNode('end')}
-              >
-                + End
-              </button>
+            <div className="panel toolbar process-command-bar">
+              <div className="process-command-bar__header">
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => navigate('/')}
+                >
+                  &larr; Back
+                </button>
+                <div className="process-command-bar__title-group">
+                  <span className="toolbar-eyebrow">Process editor</span>
+                  <span className="toolbar-process-name">{process.name}</span>
+                </div>
+                <div className="toolbar-status-cluster">
+                  <span className="toolbar-status-pill">{nodes.length} nodes</span>
+                  <span className="toolbar-status-pill">{edges.length} connections</span>
+                </div>
+              </div>
+
+              <div className="process-command-bar__row">
+                <div className="toolbar-section">
+                  <span className="toolbar-label">Build</span>
+                  <div className="toolbar-node-actions">
+                    <button
+                      className="btn btn-sm btn-node-start"
+                      onClick={() => handleAddNode('start')}
+                    >
+                      + Start
+                    </button>
+                    <button
+                      className="btn btn-sm btn-node-task"
+                      onClick={() => handleAddNode('task')}
+                    >
+                      + Task
+                    </button>
+                    <button
+                      className="btn btn-sm btn-node-decision"
+                      onClick={() => handleAddNode('decision')}
+                    >
+                      + Decision
+                    </button>
+                    <button
+                      className="btn btn-sm btn-node-end"
+                      onClick={() => handleAddNode('end')}
+                    >
+                      + End
+                    </button>
+                  </div>
+                </div>
+
+                <div className="toolbar-divider" />
+
+                <div className="toolbar-section toolbar-section--status">
+                  <span className="toolbar-label">Selection</span>
+                  <span className="toolbar-selection-summary">{selectionSummary}</span>
+                </div>
+              </div>
             </div>
           </Panel>
 
           <Panel position="top-right">
-            <div className="panel toolbar layout-toolbar">
-              <span className="toolbar-label">Layout:</span>
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={() => handleAutoLayout('vertical')}
-                title="Arrange nodes top to bottom"
-              >
-                ↓ Vertical
-              </button>
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={() => handleAutoLayout('horizontal')}
-                title="Arrange nodes left to right"
-              >
-                → Horizontal
-              </button>
-              <div className="toolbar-divider" />
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={handleFitView}
-                title="Fit all nodes in view"
-              >
-                ⊡ Fit
-              </button>
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={handleReset}
-                title="Reload graph from server"
-              >
-                ↺ Reset
-              </button>
+            <div className="panel toolbar layout-toolbar command-actions-panel">
+              <div className="toolbar-section">
+                <span className="toolbar-label">Layout</span>
+                <div className="command-action-grid">
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => handleAutoLayout('vertical')}
+                    title="Arrange nodes top to bottom"
+                  >
+                    ↓ Vertical
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => handleAutoLayout('horizontal')}
+                    title="Arrange nodes left to right"
+                  >
+                    → Horizontal
+                  </button>
+                </div>
+              </div>
+              <div className="toolbar-divider toolbar-divider--horizontal" />
+              <div className="toolbar-section">
+                <span className="toolbar-label">View</span>
+                <div className="command-action-grid">
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={handleFitView}
+                    title="Fit all nodes in view"
+                  >
+                    ⊡ Fit
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={handleReset}
+                    title="Reload graph from server"
+                  >
+                    ↺ Reset
+                  </button>
+                </div>
+              </div>
             </div>
           </Panel>
         </ReactFlow>
