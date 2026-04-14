@@ -530,6 +530,21 @@ function ProcessEditorInner() {
     );
   }
 
+  const startCount = nodes.filter((node) => node.data?.type === 'start').length;
+  const taskCount = nodes.filter((node) => node.data?.type === 'task').length;
+  const decisionCount = nodes.filter((node) => node.data?.type === 'decision').length;
+  const endCount = nodes.filter((node) => node.data?.type === 'end').length;
+  const selectedLabel = selectedNode
+    ? `Node · ${selectedNode.title}`
+    : selectedEdge
+      ? `Edge · ${selectedEdge.label || 'Untitled connection'}`
+      : 'Canvas';
+  const statCards = [
+    { label: 'Nodes', value: String(nodes.length), tone: 'accent' },
+    { label: 'Links', value: String(edges.length), tone: 'muted' },
+    { label: 'Selection', value: selectedLabel, tone: selectedNode || selectedEdge ? 'success' : 'muted' },
+  ];
+
   return (
     <div className="main-content">
       <div className="graph-container">
@@ -556,74 +571,109 @@ function ProcessEditorInner() {
           <Background variant={BackgroundVariant.Dots} gap={20} />
 
           <Panel position="top-left">
-            <div className="panel toolbar">
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={() => navigate('/')}
-              >
-                &larr; Back
-              </button>
-              <span className="toolbar-process-name">{process.name}</span>
-              <div className="toolbar-divider" />
-              <button
-                className="btn btn-sm btn-node-start"
-                onClick={() => handleAddNode('start')}
-              >
-                + Start
-              </button>
-              <button
-                className="btn btn-sm btn-node-task"
-                onClick={() => handleAddNode('task')}
-              >
-                + Task
-              </button>
-              <button
-                className="btn btn-sm btn-node-decision"
-                onClick={() => handleAddNode('decision')}
-              >
-                + Decision
-              </button>
-              <button
-                className="btn btn-sm btn-node-end"
-                onClick={() => handleAddNode('end')}
-              >
-                + End
-              </button>
+            <div className="panel toolbar process-toolbar">
+              <div className="process-toolbar-row process-toolbar-header-row">
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => navigate('/')}
+                >
+                  &larr; Back
+                </button>
+                <div className="process-toolbar-title-block">
+                  <span className="process-toolbar-kicker">Process editor</span>
+                  <span className="toolbar-process-name">{process.name}</span>
+                </div>
+                <span className="process-toolbar-chip">Live canvas</span>
+              </div>
+
+              <div className="process-stat-grid">
+                {statCards.map((stat) => (
+                  <div key={stat.label} className={`process-stat-card process-stat-${stat.tone}`}>
+                    <span>{stat.label}</span>
+                    <strong>{stat.value}</strong>
+                  </div>
+                ))}
+              </div>
+
+              <div className="process-toolbar-section">
+                <div className="process-toolbar-section-header">
+                  <span className="toolbar-label">Add nodes</span>
+                  <span className="process-toolbar-helper">Tap a node type to place it on the canvas</span>
+                </div>
+                <div className="process-toolbar-row process-node-action-row">
+                  <button
+                    className="btn btn-sm btn-node-start"
+                    onClick={() => handleAddNode('start')}
+                  >
+                    + Start
+                  </button>
+                  <button
+                    className="btn btn-sm btn-node-task"
+                    onClick={() => handleAddNode('task')}
+                  >
+                    + Task
+                  </button>
+                  <button
+                    className="btn btn-sm btn-node-decision"
+                    onClick={() => handleAddNode('decision')}
+                  >
+                    + Decision
+                  </button>
+                  <button
+                    className="btn btn-sm btn-node-end"
+                    onClick={() => handleAddNode('end')}
+                  >
+                    + End
+                  </button>
+                </div>
+                <div className="process-chip-row">
+                  <span className="process-type-chip process-type-start">{startCount} start</span>
+                  <span className="process-type-chip process-type-task">{taskCount} task</span>
+                  <span className="process-type-chip process-type-decision">{decisionCount} decision</span>
+                  <span className="process-type-chip process-type-end">{endCount} end</span>
+                </div>
+              </div>
             </div>
           </Panel>
 
           <Panel position="top-right">
-            <div className="panel toolbar layout-toolbar">
-              <span className="toolbar-label">Layout:</span>
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={() => handleAutoLayout('vertical')}
-                title="Arrange nodes top to bottom"
-              >
-                ↓ Vertical
-              </button>
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={() => handleAutoLayout('horizontal')}
-                title="Arrange nodes left to right"
-              >
-                → Horizontal
-              </button>
-              <div className="toolbar-divider" />
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={handleFitView}
-                title="Fit all nodes in view"
-              >
-                ⊡ Fit
-              </button>
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={handleReset}
-                title="Reload graph from server"
-              >
-                ↺ Reset
-              </button>
+            <div className="panel toolbar layout-toolbar process-layout-toolbar">
+              <div className="process-toolbar-section-header">
+                <span className="toolbar-label">Canvas controls</span>
+                <span className="process-toolbar-helper">Layout, frame, and sync the current graph</span>
+              </div>
+              <div className="process-toolbar-row process-layout-row">
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => handleAutoLayout('vertical')}
+                  title="Arrange nodes top to bottom"
+                >
+                  ↓ Vertical
+                </button>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => handleAutoLayout('horizontal')}
+                  title="Arrange nodes left to right"
+                >
+                  → Horizontal
+                </button>
+              </div>
+              <div className="process-toolbar-row process-layout-row process-layout-row-secondary">
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={handleFitView}
+                  title="Fit all nodes in view"
+                >
+                  ⊡ Fit
+                </button>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={handleReset}
+                  title="Reload graph from server"
+                >
+                  ↺ Reset
+                </button>
+              </div>
             </div>
           </Panel>
         </ReactFlow>

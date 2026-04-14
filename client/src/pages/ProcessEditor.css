@@ -4,6 +4,170 @@
    ============================================ */
 
 /* ============================================
+   Process Editor shell — glass pass
+   ============================================ */
+
+.process-toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+  padding: 0.875rem 0.95rem;
+  min-width: min(420px, calc(100vw - 2rem));
+  max-width: min(460px, calc(100vw - 2rem));
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03)),
+    rgba(13, 13, 19, 0.74);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.26);
+}
+
+.process-toolbar-row,
+.process-layout-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+}
+
+.process-toolbar-header-row {
+  align-items: flex-start;
+}
+
+.process-toolbar-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.process-toolbar-kicker,
+.process-toolbar-helper,
+.process-stat-card span,
+.process-toolbar-chip,
+.process-type-chip {
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+}
+
+.process-toolbar-kicker,
+.process-toolbar-helper,
+.process-stat-card span {
+  text-transform: uppercase;
+}
+
+.process-toolbar-kicker,
+.process-toolbar-helper,
+.process-stat-card span {
+  color: var(--text-secondary);
+}
+
+.process-toolbar-chip,
+.process-type-chip,
+.process-stat-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.process-toolbar-chip,
+.process-type-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.38rem 0.68rem;
+  border-radius: 999px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.process-toolbar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-top: 0.15rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.process-toolbar-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.process-toolbar-helper {
+  text-transform: none;
+  letter-spacing: 0.01em;
+}
+
+.process-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.process-stat-card {
+  border-radius: 16px;
+  padding: 0.75rem 0.85rem;
+}
+
+.process-stat-card strong {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+.process-stat-accent strong {
+  color: #c7d2fe;
+}
+
+.process-stat-success strong {
+  color: var(--success);
+}
+
+.process-chip-row,
+.process-node-action-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.process-type-start {
+  color: var(--success);
+}
+
+.process-type-task {
+  color: #c7d2fe;
+}
+
+.process-type-decision {
+  color: var(--warning);
+}
+
+.process-type-end {
+  color: var(--danger);
+}
+
+.process-layout-toolbar {
+  left: auto;
+  right: 1rem;
+  min-width: min(280px, calc(100vw - 2rem));
+  max-width: min(320px, calc(100vw - 2rem));
+}
+
+.process-layout-row-secondary {
+  padding-top: 0.1rem;
+}
+
+/* ============================================
    Node Type Color Accents (toolbar buttons)
    ============================================ */
 
@@ -193,22 +357,79 @@
    Responsive — mobile (max 480px)
    ============================================ */
 
-@media (max-width: 480px) {
-  /* Compact process name in toolbar */
-  .toolbar-process-name {
-    max-width: 100px;
-    font-size: 0.75rem;
+@media (max-width: 640px) {
+  .process-toolbar {
+    min-width: min(100%, calc(100vw - 1.5rem));
+    max-width: min(100%, calc(100vw - 1.5rem));
+    padding: 0.75rem 0.8rem;
   }
 
-  /* Hide the layout toolbar label */
+  .process-layout-toolbar {
+    min-width: min(260px, calc(100vw - 1.5rem));
+    max-width: min(280px, calc(100vw - 1.5rem));
+  }
+
+  .process-stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar-process-name {
+    max-width: 180px;
+  }
+}
+
+@media (max-width: 480px) {
+  .react-flow__minimap {
+    display: none !important;
+  }
+
+  .process-toolbar,
+  .process-layout-toolbar {
+    max-width: calc(100vw - 1rem);
+  }
+
+  .process-toolbar {
+    gap: 0.625rem;
+    padding: 0.625rem 0.7rem;
+  }
+
+  .process-toolbar-header-row,
+  .process-toolbar-section-header,
+  .process-toolbar-row,
+  .process-layout-row {
+    gap: 0.45rem;
+  }
+
+  .toolbar-process-name {
+    max-width: 140px;
+    font-size: 0.8125rem;
+  }
+
+  .process-toolbar-chip {
+    order: 3;
+  }
+
   .toolbar-label {
     display: none;
   }
 
-  /* Compact toolbar buttons */
   .toolbar .btn-sm {
-    padding: 0.3rem 0.55rem;
+    padding: 0.34rem 0.58rem;
     font-size: 0.75rem;
+  }
+
+  .process-type-chip,
+  .process-toolbar-chip {
+    font-size: 0.625rem;
+    padding: 0.33rem 0.55rem;
+  }
+
+  .process-stat-card {
+    padding: 0.68rem 0.75rem;
+  }
+
+  .process-stat-card strong {
+    font-size: 0.875rem;
   }
 
   /* NodeEditorPanel field meta: stack on very narrow screens */
