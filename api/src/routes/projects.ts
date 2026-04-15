@@ -31,6 +31,7 @@ interface ProjectBrief {
     not_started: number;
     skipped: number;
     progress_percent: number;
+    blocked: number;
   };
 }
 
@@ -77,6 +78,36 @@ function buildProjectBrief(
     });
   });
 
+  const blockedNodes = normalized
+    .filter((row) => {
+      if (row.status !== 'not_started') {
+        return false;
+      }
+
+      const predecessors = inboundByTargetId.get(row.node_id) ?? [];
+      return (
+        predecessors.length > 0 &&
+        predecessors.some((sourceNodeId) => {
+          const sourceStatus = statusByNodeId.get(sourceNodeId) ?? 'not_started';
+          return sourceStatus !== 'complete' && sourceStatus !== 'skipped';
+        })
+      );
+    })
+    .map((row) => {
+      const blockingTitles = (inboundByTargetId.get(row.node_id) ?? [])
+        .filter((sourceNodeId) => {
+          const sourceStatus = statusByNodeId.get(sourceNodeId) ?? 'not_started';
+          return sourceStatus !== 'complete' && sourceStatus !== 'skipped';
+        })
+        .map((sourceNodeId) => normalized.find((candidate) => candidate.node_id === sourceNodeId)?.title)
+        .filter((title): title is string => Boolean(title));
+
+      return {
+        ...row,
+        blockingTitles,
+      };
+    });
+
   const blockers = Array.from(
     new Set([
       ...normalized
@@ -87,6 +118,10 @@ function buildProjectBrief(
         )
         .slice(0, 2)
         .map((row) => `Decision pending: ${row.title}`),
+      ...blockedNodes.slice(0, 2).map((row) => {
+        const waitingOn = row.blockingTitles.slice(0, 2).join(', ');
+        return `Blocked: ${row.title}${waitingOn ? ` waiting on ${waitingOn}` : ''}`;
+      }),
       ...normalized
         .filter((row) => row.status === 'in_progress')
         .slice(0, 2)
@@ -95,7 +130,7 @@ function buildProjectBrief(
             `In progress: ${row.title}${row.assigned_to ? ` — owner: ${row.assigned_to}` : ''}`
         ),
     ])
-  ).slice(0, 3);
+  ).slice(0, 4);
 
   const upcoming = [
     ...normalized
@@ -136,10 +171,12 @@ function buildProjectBrief(
 
   const summaryParts = [total > 0 ? `${completed}/${total} nodes complete` : 'No nodes in this project yet'];
 
-  if (inProgress > 0) {
-    summaryParts.push(`${inProgress} in progress`);
-  } else if (readyNodes.length > 0) {
+  if (readyNodes.length > 0) {
     summaryParts.push(`${readyNodes.length} ready to start`);
+  } else if (blockedNodes.length > 0) {
+    summaryParts.push(`${blockedNodes.length} blocked`);
+  } else if (inProgress > 0) {
+    summaryParts.push(`${inProgress} in progress`);
   } else if (notStarted > 0 && total > 0) {
     summaryParts.push(`${notStarted} not started`);
   }
@@ -162,6 +199,7 @@ function buildProjectBrief(
       not_started: notStarted,
       skipped,
       progress_percent: progressPercent,
+      blocked: blockedNodes.length,
     },
   };
 }

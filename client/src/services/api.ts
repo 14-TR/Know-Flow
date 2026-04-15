@@ -106,6 +106,7 @@ export interface ProjectBrief {
     not_started: number;
     skipped: number;
     progress_percent: number;
+    blocked: number;
   };
 }
 

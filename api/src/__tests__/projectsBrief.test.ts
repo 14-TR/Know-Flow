@@ -110,6 +110,74 @@ describe('Project brief route', () => {
     ).toBe('Gather requirements');
   });
 
+
+  it('surfaces dependency-blocked nodes in the brief', async () => {
+    vi.mocked(db.query)
+      .mockResolvedValueOnce({
+        rows: [{ id: 'proj-1', name: 'Alpha', process_id: 'proc-1', status: 'active' }],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            node_id: 'node-3',
+            title: 'Build prototype',
+            type: 'task',
+            status: 'not_started',
+            decision_result: null,
+            assigned_to: null,
+            notes: null,
+            started_at: null,
+            completed_at: null,
+            due_date: null,
+          },
+          {
+            node_id: 'node-2',
+            title: 'Gather requirements',
+            type: 'task',
+            status: 'in_progress',
+            decision_result: null,
+            assigned_to: 'TR',
+            notes: null,
+            started_at: null,
+            completed_at: null,
+            due_date: null,
+          },
+          {
+            node_id: 'node-1',
+            title: 'Kickoff',
+            type: 'start',
+            status: 'complete',
+            decision_result: null,
+            assigned_to: null,
+            notes: null,
+            started_at: null,
+            completed_at: null,
+            due_date: null,
+          },
+        ],
+        rowCount: 3,
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          { source_node_id: 'node-1', target_node_id: 'node-2' },
+          { source_node_id: 'node-2', target_node_id: 'node-3' },
+        ],
+        rowCount: 2,
+      });
+
+    const res = await request(app, 'GET', '/api/projects/proj-1/brief');
+
+    expect(res.status).toBe(200);
+    expect((res.body as { summary: string }).summary).toContain('1 blocked');
+    expect((res.body as { blockers: string[] }).blockers).toContain(
+      'Blocked: Build prototype waiting on Gather requirements'
+    );
+    expect(
+      (res.body as { stats: { blocked: number } }).stats.blocked
+    ).toBe(1);
+  });
+
   it('keeps pending decisions as the suggested next action', async () => {
     vi.mocked(db.query)
       .mockResolvedValueOnce({

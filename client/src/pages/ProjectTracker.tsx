@@ -226,9 +226,9 @@ export default function ProjectTracker() {
       tone: 'muted',
     },
     {
-      label: 'Watch-outs',
-      value: projectBrief?.blockers.length ? `${projectBrief.blockers.length}` : '0',
-      tone: projectBrief?.blockers.length ? 'warning' : 'muted',
+      label: 'Blocked',
+      value: briefStats ? `${briefStats.blocked}` : '—',
+      tone: briefStats?.blocked ? 'warning' : 'muted',
     },
   ];
 
