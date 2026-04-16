@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { getProjects, getProcesses, createProject, deleteProject, exportProject, importProject } from '../services/api';
 import type { Project, Process } from '../types';
 import Modal from '../components/Modal';
@@ -190,18 +190,58 @@ export default function ProjectList() {
         )}
 
         {projects.length === 0 ? (
-          <div className="empty-state">
-            <h3>No projects yet</h3>
+          <div className="empty-state empty-state--guided">
+            <div className="empty-state-eyebrow">Quick start</div>
+            <h3>{processes.length === 0 ? 'Start with a process template' : 'Spin up your first project'}</h3>
             <p>
               {processes.length === 0
-                ? 'Create a process template first before creating projects.'
-                : 'Create your first project to start tracking progress.'}
+                ? 'Projects are live runs of a process. Create or import a process template first, then come back here to track real work.'
+                : `You have ${processes.length} process template${processes.length === 1 ? '' : 's'} ready. Pick one and ProjectIQ will create a live tracker with progress, decisions, and calendar context.`}
             </p>
-            {processes.length > 0 && (
-              <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-                Create Project
-              </button>
-            )}
+
+            <div className="empty-state-actions">
+              {processes.length > 0 ? (
+                <>
+                  <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+                    + Create Project
+                  </button>
+                  <Link className="btn btn-secondary" to="/">
+                    Browse Process Templates
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link className="btn btn-primary" to="/">
+                    Create a Process
+                  </Link>
+                  <p className="empty-state-hint">Need an example? Use the import button above on Processes to load a template backup.</p>
+                </>
+              )}
+            </div>
+
+            <div className="quick-start-grid">
+              <div className="quick-start-card">
+                <span className="quick-start-step">1</span>
+                <div>
+                  <strong>{processes.length === 0 ? 'Define the workflow' : 'Choose a template'}</strong>
+                  <p>{processes.length === 0 ? 'Map the steps, decisions, and handoffs in a reusable process.' : 'Select the process that best matches the work you want to track.'}</p>
+                </div>
+              </div>
+              <div className="quick-start-card">
+                <span className="quick-start-step">2</span>
+                <div>
+                  <strong>{processes.length === 0 ? 'Return here' : 'Name the project'}</strong>
+                  <p>{processes.length === 0 ? 'Once a process exists, this Projects page becomes your execution dashboard.' : 'Create a live project run for a client deliverable, feature, or internal initiative.'}</p>
+                </div>
+              </div>
+              <div className="quick-start-card">
+                <span className="quick-start-step">3</span>
+                <div>
+                  <strong>Track progress</strong>
+                  <p>Open the project to mark nodes complete, capture notes, and keep momentum visible.</p>
+                </div>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="list-grid">
