@@ -535,6 +535,9 @@ function ProcessEditorInner() {
     : selectedEdge
       ? 'Connection selected'
       : 'Canvas ready';
+  const explorerTarget = selectedNode
+    ? `/explorer?pid=${process.id}&ws=${selectedNode.id}&view=neighborhood&source=process-editor`
+    : `/explorer?pid=${process.id}&view=search&source=process-editor`;
 
   return (
     <div className="main-content">
@@ -659,6 +662,13 @@ function ProcessEditorInner() {
                     title="Reload graph from server"
                   >
                     ↺ Reset
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => navigate(explorerTarget)}
+                    title="Open this process in Graph Explorer"
+                  >
+                    ↗ Explorer
                   </button>
                 </div>
               </div>

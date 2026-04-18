@@ -73,6 +73,71 @@
   color: var(--text-secondary);
 }
 
+.explorer-working-set-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.14), rgba(255, 255, 255, 0.02));
+}
+
+.explorer-working-set-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.explorer-working-set-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+}
+
+.explorer-working-set-chips,
+.explorer-working-set-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.working-set-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.38rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+}
+
+.working-set-chip-source {
+  color: var(--accent-hover);
+  border-color: rgba(99, 102, 241, 0.35);
+  background: rgba(99, 102, 241, 0.14);
+}
+
+.explorer-working-set-actions button {
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  transition: var(--transition);
+}
+
+.explorer-working-set-actions button:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .explorer-tabs {
   display: flex;
   gap: 0.25rem;
@@ -1024,6 +1089,12 @@
 
   .explorer-content {
     padding: 1.25rem 1rem 6.25rem;
+  }
+
+  .explorer-working-set-bar {
+    padding: 1rem;
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .explorer-tabs {

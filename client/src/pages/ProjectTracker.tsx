@@ -209,6 +209,10 @@ export default function ProjectTracker() {
   const progress = getProgress();
   const briefStats = projectBrief?.stats;
   const currentNodes = project?.currentNodes || [];
+  const workingSetParam = currentNodes.map((node) => node.node_id).join(',');
+  const explorerTarget = workingSetParam
+    ? `/explorer?pid=${project.process_id}&ws=${workingSetParam}&view=context&source=project-tracker`
+    : `/explorer?pid=${project.process_id}&view=search&source=project-tracker`;
   const trackerHighlights = [
     {
       label: 'Completed',
@@ -358,6 +362,13 @@ export default function ProjectTracker() {
                     title="Open project calendar"
                   >
                     📅 Calendar
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => navigate(explorerTarget)}
+                    title="Open current focus in Graph Explorer"
+                  >
+                    ↗ Explorer
                   </button>
                 </div>
               </div>
