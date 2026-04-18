@@ -19,21 +19,34 @@ import { useToast } from '../components/Toast';
 
 type ViewMode = 'search' | 'processes' | 'neighborhood' | 'paths' | 'context';
 
+const VIEW_MODES: ViewMode[] = ['search', 'processes', 'neighborhood', 'paths', 'context'];
+
 interface SearchResultNode extends ProcessNode {
   process_name: string;
   process_description: string | null;
 }
+
+const parseWorkingSet = (raw: string | null) =>
+  new Set(
+    (raw || '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean)
+  );
+
+const normalizeViewMode = (raw: string | null): ViewMode =>
+  VIEW_MODES.includes(raw as ViewMode) ? (raw as ViewMode) : 'search';
 
 export function GraphExplorer() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // State
-  const [viewMode, setViewMode] = useState<ViewMode>('search');
+  const [viewMode, setViewMode] = useState<ViewMode>(() => normalizeViewMode(searchParams.get('view')));
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
-  const [searchType, setSearchType] = useState<string>('');
-  const [searchProcessId, setSearchProcessId] = useState<string>('');
+  const [searchType, setSearchType] = useState<string>(searchParams.get('type') || '');
+  const [searchProcessId, setSearchProcessId] = useState<string>(searchParams.get('pid') || '');
   const [searchResults, setSearchResults] = useState<SearchResultNode[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +65,7 @@ export function GraphExplorer() {
   const [pathResults, setPathResults] = useState<PathResult | null>(null);
 
   // Context builder
-  const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
+  const [selectedNodes, setSelectedNodes] = useState<Set<string>>(() => parseWorkingSet(searchParams.get('ws')));
   const [contextResult, setContextResult] = useState<ContextBuildResult | null>(null);
   const [contextFormat, setContextFormat] = useState<'markdown' | 'text'>('markdown');
 
@@ -61,6 +74,26 @@ export function GraphExplorer() {
 
   const selectedCount = selectedNodes.size;
   const selectedNodeIds = useMemo(() => Array.from(selectedNodes), [selectedNodes]);
+  const sourceContext = searchParams.get('source') || '';
+  const processNameById = useMemo(
+    () => new Map(processes.map((process) => [process.id, process.name])),
+    [processes]
+  );
+  const activeProcessName = searchProcessId ? processNameById.get(searchProcessId) || 'Filtered process' : null;
+
+  const updateExplorerParams = useCallback((updates: Record<string, string | null | undefined>) => {
+    const nextParams = new URLSearchParams(searchParams);
+
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === undefined || value === '') {
+        nextParams.delete(key);
+      } else {
+        nextParams.set(key, value);
+      }
+    });
+
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   // Keyboard shortcut: '/' → focus search
   useKeyboardShortcuts([
@@ -79,15 +112,6 @@ export function GraphExplorer() {
   useEffect(() => {
     loadProcesses();
   }, []);
-
-  // Handle URL search param
-  useEffect(() => {
-    const q = searchParams.get('q');
-    if (q && q !== searchQuery) {
-      setSearchQuery(q);
-      handleSearch(q);
-    }
-  }, [searchParams]);
 
   const loadProcesses = async () => {
     try {
@@ -114,17 +138,55 @@ export function GraphExplorer() {
         limit: 50,
       });
       setSearchResults(result.results);
-      setSearchParams({ q: q.trim() });
+      updateExplorerParams({ q: q.trim() });
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setIsLoading(false);
     }
-  }, [searchQuery, searchType, searchProcessId, setSearchParams]);
+  }, [searchQuery, searchType, searchProcessId, updateExplorerParams]);
+
+  // Handle URL search param
+  useEffect(() => {
+    const q = searchParams.get('q') || '';
+    const nextType = searchParams.get('type') || '';
+    const nextProcessId = searchParams.get('pid') || '';
+    const nextViewMode = normalizeViewMode(searchParams.get('view'));
+    const nextWorkingSet = parseWorkingSet(searchParams.get('ws'));
+
+    if (q !== searchQuery) {
+      setSearchQuery(q);
+      if (q) {
+        handleSearch(q);
+      } else {
+        setSearchResults([]);
+      }
+    }
+
+    if (nextType !== searchType) setSearchType(nextType);
+    if (nextProcessId !== searchProcessId) setSearchProcessId(nextProcessId);
+    if (nextViewMode !== viewMode) setViewMode(nextViewMode);
+
+    const currentWorkingSet = selectedNodeIds.join(',');
+    const nextWorkingSetValue = Array.from(nextWorkingSet).join(',');
+    if (currentWorkingSet !== nextWorkingSetValue) {
+      setSelectedNodes(nextWorkingSet);
+    }
+  }, [handleSearch, searchParams, searchProcessId, searchQuery, searchType, selectedNodeIds, viewMode]);
+
+  useEffect(() => {
+    updateExplorerParams({
+      type: searchType || null,
+      pid: searchProcessId || null,
+      view: viewMode !== 'search' ? viewMode : null,
+      ws: selectedNodeIds.length ? selectedNodeIds.join(',') : null,
+    });
+  }, [searchType, searchProcessId, viewMode, selectedNodeIds, updateExplorerParams]);
 
   const handleViewNeighborhood = async (nodeId: string) => {
     setSelectedNodeId(nodeId);
     setViewMode('neighborhood');
+    updateExplorerParams({ view: 'neighborhood' });
     setIsLoading(true);
     setError(null);
 
@@ -173,6 +235,7 @@ export function GraphExplorer() {
       });
       setContextResult(result);
       setViewMode('context');
+      updateExplorerParams({ view: 'context' });
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -248,6 +311,36 @@ export function GraphExplorer() {
           </div>
         </div>
       </header>
+
+      {(sourceContext || selectedCount > 0 || activeProcessName) && (
+        <section className="explorer-working-set-bar">
+          <div className="explorer-working-set-copy">
+            <span className="explorer-working-set-label">Working set</span>
+            <div className="explorer-working-set-chips">
+              {sourceContext && <span className="working-set-chip working-set-chip-source">From {sourceContext.replace('-', ' ')}</span>}
+              {activeProcessName && <span className="working-set-chip">{activeProcessName}</span>}
+              <span className="working-set-chip">{selectedCount} selected node{selectedCount === 1 ? '' : 's'}</span>
+            </div>
+          </div>
+          <div className="explorer-working-set-actions">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedNodes(new Set());
+                setContextResult(null);
+                updateExplorerParams({ ws: null, source: null });
+              }}
+            >
+              Clear working set
+            </button>
+            {searchProcessId && (
+              <button type="button" onClick={() => navigate(`/process/${searchProcessId}`)}>
+                Open process
+              </button>
+            )}
+          </div>
+        </section>
+      )}
 
       <div className="explorer-tabs">
         <button
@@ -383,6 +476,7 @@ export function GraphExplorer() {
                     <button onClick={() => {
                       setSourceNodeId(node.id);
                       setViewMode('paths');
+                      updateExplorerParams({ view: 'paths' });
                     }}>
                       Set as Path Start
                     </button>
@@ -396,6 +490,9 @@ export function GraphExplorer() {
                 <span>{selectedCount} node(s) selected</span>
                 <button onClick={handleBuildContext}>
                   Build Context
+                </button>
+                <button onClick={() => setViewMode('search')}>
+                  Keep Exploring
                 </button>
                 <button onClick={() => setSelectedNodes(new Set())}>
                   Clear Selection
