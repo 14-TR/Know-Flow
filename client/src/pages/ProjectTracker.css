@@ -1,18 +1,19 @@
-/* ============================================
-   Project Tracker — Apple Dark Mode
-   Uses CSS variables from index.css
-   ============================================ */
-
-/* ============================================
-   Toolbar Panel (top-left overlay on graph)
-   ============================================ */
+.tracker-shell {
+  isolation: isolate;
+}
 
 .tracker-toolbar {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0.5rem;
-  padding: 0.625rem 0.75rem;
+  gap: 0.75rem;
+  width: min(28rem, calc(100vw - 2rem));
+  padding: 0.875rem;
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(10, 10, 10, 0.86), rgba(10, 10, 10, 0.7));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(24px);
 }
 
 .tracker-toolbar-row {
@@ -22,176 +23,52 @@
   flex-wrap: wrap;
 }
 
-.tracker-project-name {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 200px;
+.tracker-toolbar-topline {
+  justify-content: space-between;
 }
 
-/* ============================================
-   Progress Row
-   ============================================ */
-
-.tracker-progress-row {
-  display: flex;
+.tracker-process-chip,
+.tracker-status-pill,
+.tracker-next-action-type,
+.tracker-section-meta {
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-}
-
-.tracker-progress-label {
-  font-size: 0.6875rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-.tracker-progress-bar {
-  flex: 1;
-  min-width: 100px;
-  max-width: 160px;
-  height: 4px;
-  background: var(--bg-elevated);
-  border-radius: 2px;
-  overflow: hidden;
-  border: 1px solid var(--border);
-}
-
-.tracker-progress-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--success));
-  border-radius: 2px;
-  transition: width 0.4s ease;
-}
-
-.tracker-progress-pct {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  padding: 0.26rem 0.65rem;
   font-size: 0.6875rem;
   font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.tracker-process-chip,
+.tracker-section-meta {
   color: var(--text-secondary);
-  white-space: nowrap;
-  min-width: 2.5rem;
-  text-align: right;
+  background: rgba(255, 255, 255, 0.04);
 }
 
-/* ============================================
-   Responsive
-   ============================================ */
-
-@media (max-width: 640px) {
-  .tracker-project-name {
-    max-width: 120px;
-  }
-
-  .tracker-progress-bar {
-    min-width: 60px;
-    max-width: 100px;
-  }
+.tracker-command-card,
+.tracker-highlight-card,
+.tracker-glass-section,
+.tracker-focus-chip {
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.025));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
-/* ============================================
-   MiniMap — hide on very small screens to
-   reclaim viewport real estate on mobile
-   ============================================ */
-
-@media (max-width: 480px) {
-  /* Hide MiniMap on small screens */
-  .react-flow__minimap {
-    display: none !important;
-  }
-
-  /* Compact tracker toolbar on phone */
-  .tracker-toolbar {
-    padding: 0.5rem 0.625rem;
-    gap: 0.375rem;
-    max-width: calc(100vw - 1.5rem);
-  }
-
-  .tracker-toolbar-row {
-    gap: 0.375rem;
-    flex-wrap: wrap;
-  }
-
-  .tracker-project-name {
-    font-size: 0.8125rem;
-    max-width: 140px;
-  }
-
-  .tracker-progress-bar {
-    min-width: 60px;
-    max-width: 100px;
-  }
-
-  .tracker-progress-label {
-    display: none;
-  }
-}
-
-/* ============================================
-   NodeStatusPanel — slide up full-width from
-   bottom on mobile (override from index.css)
-   ============================================ */
-
-@media (max-width: 640px) {
-  /* The panel is positioned via .node-editor in index.css;
-     these classes come from NodeStatusPanel.tsx */
-  .tracker-toolbar {
-    padding: 0.5rem 0.625rem;
-  }
-}
-
-/* ============================================
-   Action Row — Edit / Calendar buttons
-   ============================================ */
-
-.tracker-action-row {
-  padding-top: 0.25rem;
-  border-top: 1px solid var(--border);
-  margin-top: 0.125rem;
-}
-
-.tracker-calendar-btn {
-  color: var(--accent-hover) !important;
-  border-color: rgba(99, 102, 241, 0.3) !important;
-}
-
-.tracker-calendar-btn:hover {
-  background: var(--accent-dim) !important;
-  border-color: rgba(99, 102, 241, 0.5) !important;
-}
-
-@media (max-width: 480px) {
-  .tracker-action-row {
-    gap: 0.25rem;
-  }
-
-  .tracker-action-row .btn {
-    font-size: 0.75rem;
-    padding: 0.3rem 0.5rem;
-  }
-}
-
-/* ============================================
-   Project Brief Card
-   ============================================ */
-
-.tracker-brief-card {
+.tracker-command-card {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(16px);
+  gap: 0.85rem;
+  padding: 1rem;
 }
 
+.tracker-command-header,
+.tracker-brief-section-heading,
 .tracker-brief-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
 }
@@ -213,66 +90,138 @@
   color: var(--accent);
 }
 
-.tracker-brief-summary,
-.tracker-brief-next span,
-.tracker-brief-list-block li {
-  font-size: 0.8125rem;
-  line-height: 1.45;
+.tracker-command-title {
+  margin: 0.35rem 0 0;
+  font-size: 1.5rem;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
   color: var(--text-primary);
 }
 
-.tracker-brief-summary {
+.tracker-command-summary,
+.tracker-brief-summary,
+.tracker-brief-next span,
+.tracker-brief-list-block li,
+.tracker-empty-copy,
+.tracker-highlight-card p,
+.tracker-status-line {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.tracker-command-summary,
+.tracker-brief-summary,
+.tracker-highlight-card p,
+.tracker-empty-copy {
   margin: 0;
 }
 
-.tracker-brief-next,
-.tracker-brief-list-block {
+.tracker-progress-block {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.55rem;
 }
 
-.tracker-brief-next strong {
-  font-size: 0.875rem;
+.tracker-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tracker-progress-label,
+.tracker-progress-caption {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.tracker-progress-label {
+  font-weight: 600;
+}
+
+.tracker-progress-caption {
+  flex: 1;
+}
+
+.tracker-progress-bar {
+  flex: 1;
+  min-width: 100px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tracker-progress-bar-lg {
+  height: 10px;
+}
+
+.tracker-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1, #34d399);
+  border-radius: inherit;
+  transition: width 0.4s ease;
+}
+
+.tracker-progress-pct {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.tracker-status-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  color: var(--text-secondary);
+}
+
+.tracker-status-pill-active,
+.tracker-status-pill-accent {
   color: #c7d2fe;
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.28);
 }
 
-.tracker-brief-list-block ul {
-  margin: 0;
-  padding-left: 1rem;
+.tracker-status-pill-completed,
+.tracker-status-pill-success {
+  color: var(--success);
+  background: rgba(52, 211, 153, 0.12);
+  border-color: rgba(52, 211, 153, 0.28);
 }
 
-.tracker-brief-list-block li + li {
-  margin-top: 0.2rem;
+.tracker-status-pill-archived,
+.tracker-status-pill-muted {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
 }
 
-@media (max-width: 480px) {
-  .tracker-brief-card {
-    padding: 0.625rem;
-  }
+.tracker-status-pill-warning {
+  color: var(--warning);
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.28);
 }
 
-
-.tracker-highlight-grid {
+.tracker-highlight-grid,
+.tracker-split-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .tracker-highlight-card,
-.tracker-glass-section,
-.tracker-focus-chip {
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+.tracker-glass-section {
+  padding: 0.85rem 0.9rem;
 }
 
 .tracker-highlight-card {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
-  padding: 0.65rem 0.75rem;
+  gap: 0.3rem;
 }
 
 .tracker-highlight-card span {
@@ -283,7 +232,8 @@
 }
 
 .tracker-highlight-card strong {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
+  line-height: 1.1;
   letter-spacing: -0.03em;
   color: var(--text-primary);
 }
@@ -300,12 +250,31 @@
   color: var(--warning);
 }
 
-.tracker-highlight-muted strong {
-  color: var(--text-primary);
+.tracker-brief-next,
+.tracker-brief-list-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
 }
 
-.tracker-glass-section {
-  padding: 0.7rem 0.8rem;
+.tracker-next-action-card strong {
+  font-size: 0.95rem;
+  color: #e0e7ff;
+}
+
+.tracker-next-action-type {
+  color: #c7d2fe;
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.28);
+}
+
+.tracker-brief-list-block ul {
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.tracker-brief-list-block li + li {
+  margin-top: 0.3rem;
 }
 
 .tracker-chip-list {
@@ -320,7 +289,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
-  padding: 0.65rem 0.75rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 16px;
 }
 
 .tracker-focus-chip strong {
@@ -328,25 +298,124 @@
   color: var(--text-primary);
 }
 
-.tracker-focus-chip span {
+.tracker-focus-chip span,
+.tracker-empty-copy {
   font-size: 0.75rem;
   color: var(--text-secondary);
 }
 
-.tracker-brief-header {
-  align-items: flex-start;
+.tracker-legend-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
 }
 
-.tracker-brief-summary {
-  margin-top: 0.35rem;
+.tracker-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--text-primary);
+  font-size: 0.75rem;
+}
+
+.tracker-legend-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.tracker-legend-dot-success {
+  background: var(--success);
+}
+
+.tracker-legend-dot-warning {
+  background: var(--warning);
+}
+
+.tracker-legend-dot-muted {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.tracker-legend-dot-accent {
+  background: #6366f1;
+}
+
+.tracker-action-row {
+  padding-top: 0.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tracker-calendar-btn {
+  color: var(--accent-hover) !important;
+  border-color: rgba(99, 102, 241, 0.3) !important;
+}
+
+.tracker-calendar-btn:hover {
+  background: var(--accent-dim) !important;
+  border-color: rgba(99, 102, 241, 0.5) !important;
+}
+
+@media (max-width: 900px) {
+  .tracker-toolbar {
+    width: min(26rem, calc(100vw - 1.5rem));
+  }
+
+  .tracker-highlight-grid,
+  .tracker-split-grid,
+  .tracker-legend-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .tracker-toolbar {
+    padding: 0.75rem;
+    gap: 0.625rem;
+    width: min(100vw - 1rem, 100%);
+    border-radius: 20px;
+  }
+
+  .tracker-command-card,
+  .tracker-highlight-card,
+  .tracker-glass-section {
+    padding: 0.8rem;
+    border-radius: 18px;
+  }
+
+  .tracker-command-title {
+    font-size: 1.25rem;
+  }
+
+  .tracker-progress-caption {
+    flex-basis: 100%;
+  }
 }
 
 @media (max-width: 480px) {
-  .tracker-highlight-grid {
-    grid-template-columns: 1fr;
+  .react-flow__minimap {
+    display: none !important;
   }
 
-  .tracker-highlight-card strong {
-    font-size: 1rem;
+  .tracker-toolbar {
+    max-width: calc(100vw - 0.75rem);
+    padding: 0.625rem;
+  }
+
+  .tracker-toolbar-topline {
+    gap: 0.45rem;
+  }
+
+  .tracker-process-chip,
+  .tracker-section-meta,
+  .tracker-next-action-type,
+  .tracker-status-pill {
+    font-size: 0.625rem;
+    padding: 0.24rem 0.55rem;
+  }
+
+  .tracker-action-row .btn {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.5rem;
   }
 }
