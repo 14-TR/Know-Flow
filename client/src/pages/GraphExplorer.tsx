@@ -61,6 +61,9 @@ export function GraphExplorer() {
 
   const selectedCount = selectedNodes.size;
   const selectedNodeIds = useMemo(() => Array.from(selectedNodes), [selectedNodes]);
+  const totalProcessNodes = useMemo(() => processes.reduce((sum, process) => sum + process.node_count, 0), [processes]);
+  const totalProcessEdges = useMemo(() => processes.reduce((sum, process) => sum + process.edge_count, 0), [processes]);
+  const totalProcessDecisions = useMemo(() => processes.reduce((sum, process) => sum + process.decision_count, 0), [processes]);
 
   // Keyboard shortcut: '/' → focus search
   useKeyboardShortcuts([
@@ -408,43 +411,91 @@ export function GraphExplorer() {
         {/* Processes View */}
         {viewMode === 'processes' && (
           <div className="processes-view">
-            <h2>Available Processes</h2>
-            <div className="processes-grid">
-              {processes.map((process) => (
-                <div key={process.id} className="process-card">
-                  <h3>{process.name}</h3>
-                  {process.description && (
-                    <p className="process-description">{process.description}</p>
-                  )}
-                  <div className="process-stats">
-                    <span>{process.node_count} nodes</span>
-                    <span>{process.edge_count} edges</span>
-                    <span>{process.decision_count} decisions</span>
-                    <span>{process.project_count} projects</span>
-                  </div>
-                  <div className="process-actions">
-                    <button onClick={() => navigate(`/process/${process.id}`)}>
-                      Edit
-                    </button>
-                    <button onClick={() => exportContext(process.id, 'markdown')}>
-                      Copy as Markdown
-                    </button>
-                    <button onClick={() => exportContext(process.id, 'text')}>
-                      Copy as Text
-                    </button>
-                  </div>
-                </div>
-              ))}
+            <div className="section-heading">
+              <div>
+                <h2>Process command center</h2>
+                <p>Review process coverage, jump into editing, and export context packs without leaving the explorer.</p>
+              </div>
+              <span className="section-kicker">Overview</span>
             </div>
+
+            <div className="summary-grid">
+              <div className="summary-card">
+                <span className="summary-label">Processes</span>
+                <strong>{processes.length}</strong>
+                <p>Command-center view for every mapped process in the workspace.</p>
+              </div>
+              <div className="summary-card">
+                <span className="summary-label">Mapped nodes</span>
+                <strong>{totalProcessNodes}</strong>
+                <p>Total graph nodes available to explore across all process maps.</p>
+              </div>
+              <div className="summary-card">
+                <span className="summary-label">Edges + decisions</span>
+                <strong>{totalProcessEdges + totalProcessDecisions}</strong>
+                <p>{totalProcessEdges} edges and {totalProcessDecisions} decisions tracked overall.</p>
+              </div>
+            </div>
+
+            {processes.length === 0 ? (
+              <div className="explorer-empty-state section-empty-state">
+                <h3>No processes available yet</h3>
+                <p>Once processes are created, this view becomes the fastest way to inspect graph coverage and export context.</p>
+              </div>
+            ) : (
+              <div className="processes-grid">
+                {processes.map((process) => (
+                  <div key={process.id} className="process-card">
+                    <div className="process-card-header">
+                      <div>
+                        <span className="card-kicker">Process graph</span>
+                        <h3>{process.name}</h3>
+                      </div>
+                      <span className="inline-stat">{process.project_count} linked project{process.project_count === 1 ? '' : 's'}</span>
+                    </div>
+                    {process.description ? (
+                      <p className="process-description">{process.description}</p>
+                    ) : (
+                      <p className="process-description process-description-muted">No description yet — open the process to add operating context for the team.</p>
+                    )}
+                    <div className="process-stats">
+                      <span>{process.node_count} nodes</span>
+                      <span>{process.edge_count} edges</span>
+                      <span>{process.decision_count} decisions</span>
+                      <span>{process.project_count} projects</span>
+                    </div>
+                    <div className="process-actions">
+                      <button onClick={() => navigate(`/process/${process.id}`)}>
+                        Open Editor
+                      </button>
+                      <button onClick={() => exportContext(process.id, 'markdown')}>
+                        Copy Markdown
+                      </button>
+                      <button onClick={() => exportContext(process.id, 'text')}>
+                        Copy Text
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         {/* Neighborhood View */}
         {viewMode === 'neighborhood' && (
           <div className="neighborhood-view">
-            <div className="neighborhood-controls">
+            <div className="section-heading">
+              <div>
+                <h2>Neighborhood explorer</h2>
+                <p>Start from a known node, widen the hop depth, and pull adjacent nodes into your context pack.</p>
+              </div>
+              <span className="section-kicker">Investigate</span>
+            </div>
+
+            <div className="neighborhood-controls control-panel">
               <label>
-                Node ID:
+                <span className="control-label">Node ID</span>
                 <input
                   type="text"
                   value={selectedNodeId || ''}
@@ -453,7 +504,7 @@ export function GraphExplorer() {
                 />
               </label>
               <label>
-                Depth:
+                <span className="control-label">Depth</span>
                 <input
                   type="number"
                   min={1}
@@ -466,12 +517,37 @@ export function GraphExplorer() {
                 onClick={() => selectedNodeId && handleViewNeighborhood(selectedNodeId)}
                 disabled={!selectedNodeId || isLoading}
               >
-                {isLoading ? 'Loading...' : 'Explore'}
+                {isLoading ? 'Loading...' : 'Explore Neighborhood'}
               </button>
             </div>
 
+            {!neighborhood && !isLoading && (
+              <div className="explorer-empty-state section-empty-state">
+                <h3>Start from a node you already know</h3>
+                <p>Paste a node ID from search results, then expand outward to inspect dependencies, neighbors, and nearby decisions.</p>
+              </div>
+            )}
+
             {neighborhood && (
               <div className="neighborhood-result">
+                <div className="summary-grid compact-summary-grid">
+                  <div className="summary-card compact-summary-card">
+                    <span className="summary-label">Center node</span>
+                    <strong>{neighborhood.center.title}</strong>
+                    <p>{neighborhood.center.type} node selected for inspection.</p>
+                  </div>
+                  <div className="summary-card compact-summary-card">
+                    <span className="summary-label">Connected nodes</span>
+                    <strong>{neighborhood.neighbors.length}</strong>
+                    <p>Reachable within {neighborhoodDepth} hop{neighborhoodDepth === 1 ? '' : 's'}.</p>
+                  </div>
+                  <div className="summary-card compact-summary-card">
+                    <span className="summary-label">Connections</span>
+                    <strong>{neighborhood.edges.length}</strong>
+                    <p>Edges visible in the current neighborhood slice.</p>
+                  </div>
+                </div>
+
                 <div className="center-node">
                   <h3>
                     <span
@@ -488,28 +564,45 @@ export function GraphExplorer() {
                 </div>
 
                 <h4>Connected Nodes ({neighborhood.neighbors.length})</h4>
-                <div className="neighbors-list">
-                  {neighborhood.neighbors.map((node) => (
-                    <div key={node.id} className="neighbor-item">
-                      <span
-                        className="node-type-badge"
-                        style={{ backgroundColor: getNodeTypeColor(node.type) }}
-                      >
-                        {node.type}
-                      </span>
-                      <span className="neighbor-title">{node.title}</span>
-                      <span className="neighbor-depth">{node.depth} hop(s)</span>
-                      <button onClick={() => handleViewNeighborhood(node.id)}>
-                        Explore
-                      </button>
-                      <button onClick={() => toggleNodeSelection(node.id)}>
-                        {selectedNodes.has(node.id) ? 'Deselect' : 'Select'}
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                {neighborhood.neighbors.length === 0 ? (
+                  <div className="explorer-empty-state inline-empty-state">
+                    <h3>No connected nodes at this depth</h3>
+                    <p>Try increasing the hop count to widen the local graph slice.</p>
+                  </div>
+                ) : (
+                  <div className="neighbors-list">
+                    {neighborhood.neighbors.map((node) => (
+                      <div key={node.id} className="neighbor-item">
+                        <div className="neighbor-copy">
+                          <span
+                            className="node-type-badge"
+                            style={{ backgroundColor: getNodeTypeColor(node.type) }}
+                          >
+                            {node.type}
+                          </span>
+                          <span className="neighbor-title">{node.title}</span>
+                          <span className="neighbor-depth">{node.depth} hop(s) away</span>
+                        </div>
+                        <div className="neighbor-actions">
+                          <button onClick={() => handleViewNeighborhood(node.id)}>
+                            Explore
+                          </button>
+                          <button onClick={() => toggleNodeSelection(node.id)}>
+                            {selectedNodes.has(node.id) ? 'Deselect' : 'Select'}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <h4>Connections ({neighborhood.edges.length})</h4>
+                {neighborhood.edges.length === 0 ? (
+                  <div className="explorer-empty-state inline-empty-state">
+                    <h3>No explicit connections returned</h3>
+                    <p>This node may be isolated at the current depth, or connected edges may sit outside the selected neighborhood.</p>
+                  </div>
+                ) : (
                 <div className="edges-list">
                   {neighborhood.edges.map((edge) => {
                     const sourceNode = neighborhood.center.id === edge.source_node_id
@@ -529,6 +622,7 @@ export function GraphExplorer() {
                     );
                   })}
                 </div>
+                )}
               </div>
             )}
           </div>
@@ -537,9 +631,17 @@ export function GraphExplorer() {
         {/* Paths View */}
         {viewMode === 'paths' && (
           <div className="paths-view">
-            <div className="paths-controls">
+            <div className="section-heading">
+              <div>
+                <h2>Path finder</h2>
+                <p>Compare a source and target node to uncover the graph routes that connect them.</p>
+              </div>
+              <span className="section-kicker">Compare</span>
+            </div>
+
+            <div className="paths-controls control-panel">
               <label>
-                Source Node ID:
+                <span className="control-label">Source node</span>
                 <input
                   type="text"
                   value={sourceNodeId}
@@ -548,7 +650,7 @@ export function GraphExplorer() {
                 />
               </label>
               <label>
-                Target Node ID:
+                <span className="control-label">Target node</span>
                 <input
                   type="text"
                   value={targetNodeId}
@@ -564,16 +666,48 @@ export function GraphExplorer() {
               </button>
             </div>
 
+            {!pathResults && !isLoading && (
+              <div className="explorer-empty-state section-empty-state">
+                <h3>Map a route between two nodes</h3>
+                <p>Use a start and destination node to inspect how work flows and where labeled branches appear.</p>
+              </div>
+            )}
+
             {pathResults && (
               <div className="paths-result">
+                <div className="summary-grid compact-summary-grid">
+                  <div className="summary-card compact-summary-card">
+                    <span className="summary-label">Source</span>
+                    <strong>{pathResults.source.title}</strong>
+                    <p>{pathResults.source.type} node</p>
+                  </div>
+                  <div className="summary-card compact-summary-card">
+                    <span className="summary-label">Target</span>
+                    <strong>{pathResults.target.title}</strong>
+                    <p>{pathResults.target.type} node</p>
+                  </div>
+                  <div className="summary-card compact-summary-card">
+                    <span className="summary-label">Paths found</span>
+                    <strong>{pathResults.total_paths}</strong>
+                    <p>Review the shortest or most descriptive route for your handoff.</p>
+                  </div>
+                </div>
                 <h3>
                   Paths from "{pathResults.source.title}" to "{pathResults.target.title}"
                 </h3>
                 <p>Found {pathResults.total_paths} path(s)</p>
 
-                {pathResults.paths.map((path, index) => (
+                {pathResults.total_paths === 0 ? (
+                  <div className="explorer-empty-state inline-empty-state">
+                    <h3>No route found yet</h3>
+                    <p>Double-check the node IDs or try a different source and target pairing.</p>
+                  </div>
+                ) : pathResults.paths.map((path, index) => (
                   <div key={index} className="path-card">
-                    <h4>Path {index + 1} ({path.length} steps)</h4>
+                    <div className="path-card-header">
+                      <h4>Path {index + 1}</h4>
+                      <span className="inline-stat">{path.length} step{path.length === 1 ? '' : 's'}</span>
+                    </div>
                     <div className="path-steps">
                       {path.node_titles.map((title, i) => (
                         <span key={i} className="path-step">
@@ -597,7 +731,33 @@ export function GraphExplorer() {
         {/* Context Builder View */}
         {viewMode === 'context' && (
           <div className="context-view">
-            <div className="context-controls">
+            <div className="section-heading">
+              <div>
+                <h2>Context builder</h2>
+                <p>Package selected nodes into a reusable brief for prompts, docs, handoffs, or status updates.</p>
+              </div>
+              <span className="section-kicker">Package</span>
+            </div>
+
+            <div className="summary-grid compact-summary-grid">
+              <div className="summary-card compact-summary-card">
+                <span className="summary-label">Selected nodes</span>
+                <strong>{selectedCount}</strong>
+                <p>{selectedCount > 0 ? 'Ready to turn the current selection into a shareable bundle.' : 'Select nodes from Search or Neighborhood to get started.'}</p>
+              </div>
+              <div className="summary-card compact-summary-card">
+                <span className="summary-label">Output format</span>
+                <strong>{contextFormat === 'markdown' ? 'Markdown' : 'Plain text'}</strong>
+                <p>Switch output modes depending on whether you need structure or raw copy.</p>
+              </div>
+              <div className="summary-card compact-summary-card">
+                <span className="summary-label">Scope</span>
+                <strong>{contextResult ? `${contextResult.edge_count} edges` : 'Neighbors included'}</strong>
+                <p>Context builds automatically include nearby graph structure for richer summaries.</p>
+              </div>
+            </div>
+
+            <div className="context-controls control-panel">
               <span>{selectedCount} node(s) selected</span>
               <select
                 value={contextFormat}
@@ -639,7 +799,7 @@ export function GraphExplorer() {
 
             {selectedCount > 0 && !contextResult && (
               <div className="selected-nodes">
-                <h4>Selected Nodes:</h4>
+                <h4>Selected Nodes</h4>
                 <ul>
                   {selectedNodeIds.map((id) => (
                     <li key={id}>
@@ -648,6 +808,13 @@ export function GraphExplorer() {
                     </li>
                   ))}
                 </ul>
+              </div>
+            )}
+
+            {selectedCount === 0 && !contextResult && (
+              <div className="explorer-empty-state section-empty-state">
+                <h3>No nodes selected yet</h3>
+                <p>Use Search or Neighborhood to collect nodes, then return here to generate a shareable context bundle.</p>
               </div>
             )}
           </div>
