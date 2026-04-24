@@ -1,12 +1,23 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getDashboard, type DashboardData } from '../services/api';
+import OnboardingBanner, { useOnboardingDismissed } from '../components/OnboardingBanner';
 import './Dashboard.css';
+
+interface SetupStep {
+  key: string;
+  label: string;
+  detail: string;
+  complete: boolean;
+  cta: string;
+  onClick: () => void;
+}
 
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [onboardingDismissed, dismissOnboarding] = useOnboardingDismissed();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -40,28 +51,106 @@ export default function Dashboard() {
   }
 
   const { stats, recentProjects, recentProcesses } = data;
+  const isFirstRun = stats.projectTotal === 0 || stats.processCount === 0;
+  const setupSteps: SetupStep[] = [
+    {
+      key: 'process',
+      label: 'Create a process template',
+      detail: stats.processCount > 0
+        ? `${stats.processCount} template${stats.processCount === 1 ? '' : 's'} ready for reuse`
+        : 'Define the reusable workflow you want to run again and again',
+      complete: stats.processCount > 0,
+      cta: stats.processCount > 0 ? 'Open processes' : 'Create process',
+      onClick: () => navigate('/'),
+    },
+    {
+      key: 'project',
+      label: 'Start a live project',
+      detail: stats.projectTotal > 0
+        ? `${stats.projectActive} active · ${stats.projectCompleted} completed`
+        : 'Instantiate a process so the work can move through the graph',
+      complete: stats.projectTotal > 0,
+      cta: stats.projectTotal > 0 ? 'View projects' : 'Create project',
+      onClick: () => navigate('/projects'),
+    },
+    {
+      key: 'track',
+      label: 'Track execution',
+      detail: stats.inProgressNodes > 0
+        ? `${stats.inProgressNodes} node${stats.inProgressNodes === 1 ? '' : 's'} currently moving`
+        : 'Use the tracker and graph explorer to follow progress and bottlenecks',
+      complete: stats.projectTotal > 0 && stats.inProgressNodes > 0,
+      cta: stats.projectTotal > 0 ? 'Open graph explorer' : 'See dashboard guide',
+      onClick: () => navigate(stats.projectTotal > 0 ? '/explorer' : '/projects'),
+    },
+  ];
+  const completedSetupSteps = setupSteps.filter((step) => step.complete).length;
 
   return (
     <div className="dashboard">
       <div className="dash-inner">
+        {isFirstRun && !onboardingDismissed && (
+          <OnboardingBanner
+            onDismiss={dismissOnboarding}
+            firstProcessId={recentProcesses[0]?.id}
+          />
+        )}
 
-        {/* Header */}
         <div className="dash-header">
           <div>
             <h1 className="dash-title">Dashboard</h1>
-            <p className="dash-subtitle">Your project intelligence at a glance</p>
+            <p className="dash-subtitle">
+              {isFirstRun
+                ? 'A guided launchpad for your first process, project, and tracked run'
+                : 'Your project intelligence at a glance'}
+            </p>
           </div>
           <div className="dash-header-actions">
             <button className="btn btn-secondary btn-sm" onClick={() => navigate('/projects')}>
               View Projects →
             </button>
             <button className="btn btn-primary btn-sm" onClick={() => navigate('/projects')}>
-              + New Project
+              {stats.projectTotal > 0 ? '+ New Project' : 'Start First Project'}
             </button>
           </div>
         </div>
 
-        {/* Stats Grid */}
+        {isFirstRun && (
+          <section className="dash-setup-panel" aria-label="First-run checklist">
+            <div className="dash-setup-header">
+              <div>
+                <p className="dash-setup-eyebrow">First-run setup</p>
+                <h2 className="dash-setup-title">Start here</h2>
+                <p className="dash-setup-copy">
+                  New users should be able to tell what ProjectIQ is for within a few seconds. This checklist makes the next step obvious.
+                </p>
+              </div>
+              <div className="dash-setup-progress">
+                <span className="dash-setup-progress-value">{completedSetupSteps}/3</span>
+                <span className="dash-setup-progress-label">completed</span>
+              </div>
+            </div>
+
+            <div className="dash-setup-grid">
+              {setupSteps.map((step, index) => (
+                <div key={step.key} className={`dash-setup-step${step.complete ? ' dash-setup-step--complete' : ''}`}>
+                  <div className="dash-setup-step-topline">
+                    <span className="dash-setup-step-index">0{index + 1}</span>
+                    <span className={`dash-setup-step-status${step.complete ? ' is-complete' : ''}`}>
+                      {step.complete ? 'Done' : 'Next up'}
+                    </span>
+                  </div>
+                  <h3>{step.label}</h3>
+                  <p>{step.detail}</p>
+                  <button className={`btn btn-sm ${step.complete ? 'btn-secondary' : 'btn-primary'}`} onClick={step.onClick}>
+                    {step.cta}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         <div className="dash-stats-grid">
           <div className="dash-stat-card">
             <div className="dash-stat-icon dash-stat-icon--accent">
@@ -130,9 +219,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Main grid: recent projects + processes */}
         <div className="dash-main-grid">
-
           <div className="dash-section">
             <div className="dash-section-header">
               <h2 className="dash-section-title">Recent Projects</h2>
@@ -140,8 +227,8 @@ export default function Dashboard() {
             </div>
             {recentProjects.length === 0 ? (
               <div className="dash-empty">
-                <p>No projects yet.</p>
-                <button className="btn btn-primary btn-sm" onClick={() => navigate('/projects')}>Create your first project</button>
+                <p>{stats.processCount > 0 ? 'No projects yet. Start your first live run from a process template.' : 'No projects yet. Create a process first, then launch a project from it.'}</p>
+                <button className="btn btn-primary btn-sm" onClick={() => navigate('/projects')}>{stats.processCount > 0 ? 'Create your first project' : 'Go to Projects'}</button>
               </div>
             ) : (
               <div className="dash-project-list">
@@ -174,7 +261,7 @@ export default function Dashboard() {
             </div>
             {recentProcesses.length === 0 ? (
               <div className="dash-empty">
-                <p>No processes yet.</p>
+                <p>No processes yet. Create one reusable workflow to unlock the rest of the product.</p>
                 <button className="btn btn-primary btn-sm" onClick={() => navigate('/')}>Create a process</button>
               </div>
             ) : (
@@ -197,12 +284,12 @@ export default function Dashboard() {
               </div>
             )}
           </div>
-
         </div>
 
-        {/* Quick Actions */}
         <div className="dash-quick-actions">
-          <h2 className="dash-section-title" style={{ marginBottom: '1rem' }}>Quick Actions</h2>
+          <h2 className="dash-section-title" style={{ marginBottom: '1rem' }}>
+            {isFirstRun ? 'Guided actions' : 'Quick Actions'}
+          </h2>
           <div className="dash-actions-grid">
             <button className="dash-action-btn" onClick={() => navigate('/projects')}>
               <div className="dash-action-icon dash-action-icon--accent">
@@ -211,7 +298,7 @@ export default function Dashboard() {
                   <path d="M3 9h18M9 21V9" />
                 </svg>
               </div>
-              <span className="dash-action-label">New Project</span>
+              <span className="dash-action-label">{stats.projectTotal > 0 ? 'New Project' : 'Start First Project'}</span>
             </button>
             <button className="dash-action-btn" onClick={() => navigate('/')}>
               <div className="dash-action-icon dash-action-icon--purple">
@@ -220,7 +307,7 @@ export default function Dashboard() {
                   <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" />
                 </svg>
               </div>
-              <span className="dash-action-label">New Process</span>
+              <span className="dash-action-label">{stats.processCount > 0 ? 'Open Processes' : 'Create First Process'}</span>
             </button>
             <button className="dash-action-btn" onClick={() => navigate('/explorer')}>
               <div className="dash-action-icon dash-action-icon--teal">
@@ -229,7 +316,7 @@ export default function Dashboard() {
                   <line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
               </div>
-              <span className="dash-action-label">Graph Explorer</span>
+              <span className="dash-action-label">{stats.projectTotal > 0 ? 'Graph Explorer' : 'Explore the model'}</span>
             </button>
             <button className="dash-action-btn" onClick={() => navigate('/database')}>
               <div className="dash-action-icon dash-action-icon--muted">
@@ -239,11 +326,10 @@ export default function Dashboard() {
                   <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
                 </svg>
               </div>
-              <span className="dash-action-label">Database Viewer</span>
+              <span className="dash-action-label">{isFirstRun ? 'Peek at sample data' : 'Database Viewer'}</span>
             </button>
           </div>
         </div>
-
       </div>
     </div>
   );
