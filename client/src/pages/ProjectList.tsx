@@ -166,7 +166,7 @@ export default function ProjectList() {
             <h1 className="list-page-title">Projects</h1>
             <p className="list-page-subtitle">Track active work against process templates</p>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <div className="list-page-actions">
             <label className="btn btn-secondary" style={{ cursor: 'pointer', margin: 0 }} title="Import a project backup">
               {importing ? 'Importing…' : '↑ Import'}
               <input type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
