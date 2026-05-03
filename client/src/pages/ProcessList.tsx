@@ -160,7 +160,7 @@ export default function ProcessList() {
             <h1 className="list-page-title">Process Templates</h1>
             <p className="list-page-subtitle">Define reusable workflows as node graphs</p>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <div className="list-page-actions">
             <label className="btn btn-secondary" style={{ cursor: 'pointer', margin: 0 }}>
               {importing ? 'Importing…' : '↑ Import'}
               <input type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
