@@ -7,6 +7,9 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   overflow: hidden;
   background: var(--bg-base);
 }
@@ -23,6 +26,11 @@
   justify-content: space-between;
   gap: 1rem;
   flex-shrink: 0;
+  min-width: 0;
+}
+
+.db-header-left {
+  min-width: 0;
 }
 
 .db-header-left h1 {
@@ -42,8 +50,11 @@
 .db-header-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.5rem;
+  flex-wrap: wrap;
   flex-shrink: 0;
+  min-width: 0;
 }
 
 .db-auto-refresh-label {
@@ -70,9 +81,12 @@
 .db-tabs {
   display: flex;
   gap: 0.375rem;
+  max-width: 100%;
   padding: 0.875rem 2rem;
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
   flex-shrink: 0;
   background: var(--bg-surface);
 }
@@ -132,6 +146,8 @@
 
 .db-content {
   flex: 1;
+  min-width: 0;
+  min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -145,6 +161,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
   padding: 0.75rem 2rem;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
@@ -157,6 +175,10 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .db-table-name::before {
@@ -171,6 +193,8 @@
 .db-row-count {
   font-size: 0.75rem;
   color: var(--text-tertiary);
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 /* ============================================
@@ -179,12 +203,18 @@
 
 .db-table-wrapper {
   flex: 1;
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
   overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 0 0 1rem;
 }
 
 .db-table {
   width: 100%;
+  min-width: max-content;
   border-collapse: collapse;
   font-size: 0.8125rem;
   font-family: -apple-system, 'SF Pro Text', BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
@@ -308,6 +338,8 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  min-width: 0;
+  overflow-x: auto;
   background: var(--bg-surface);
   flex-shrink: 0;
 }
@@ -419,5 +451,75 @@
     gap: 0.5rem;
     align-items: stretch;
     padding: 0.625rem 0.875rem;
+  }
+}
+
+/* ============================================
+   Phone containment/readability hardening
+   ============================================ */
+
+@media (max-width: 480px) {
+  .db-header,
+  .db-tabs,
+  .db-table-toolbar,
+  .db-footer {
+    padding-left: max(0.875rem, env(safe-area-inset-left));
+    padding-right: max(0.875rem, env(safe-area-inset-right));
+  }
+
+  .db-header-actions {
+    align-items: stretch;
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .db-auto-refresh-label {
+    min-height: 36px;
+    padding: 0.375rem 0;
+  }
+
+  .db-header-actions .btn {
+    flex: 1 1 calc(50% - 0.25rem);
+    min-height: 36px;
+    justify-content: center;
+  }
+
+  .db-tabs {
+    scroll-padding-inline: 0.875rem;
+  }
+
+  .db-tab {
+    min-height: 34px;
+  }
+
+  .db-table {
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .db-table th,
+  .db-table td {
+    max-width: min(52vw, 190px);
+  }
+
+  .db-table th:first-child,
+  .db-table td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    max-width: 42vw;
+    background: var(--bg-base);
+    box-shadow: 1px 0 0 var(--border);
+  }
+
+  .db-table th:first-child {
+    z-index: 3;
+    background: var(--bg-surface);
+  }
+
+  .db-footer {
+    flex-flow: row wrap;
+    align-items: center;
+    gap: 0.35rem 0.5rem;
   }
 }
