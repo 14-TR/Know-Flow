@@ -48,11 +48,26 @@ interface GanttDrag {
   trackWidth: number;
 }
 
+function formatDateOnly(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function todayDateOnly(): string {
+  return formatDateOnly(new Date());
+}
+
+function parseDateOnly(value: string): Date {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
 function isOverdue(node: CalNode): boolean {
   if (!node.due_date) return false;
   if (node.status === 'complete' || node.status === 'skipped') return false;
-  const today = new Date().toISOString().split('T')[0];
-  return node.due_date < today;
+  return node.due_date < todayDateOnly();
 }
 
 export default function Calendar() {
@@ -61,7 +76,7 @@ export default function Calendar() {
   const [project, setProject] = useState<any>(null);
   const [view, setView] = useState<ViewMode>('gantt');
   const [direction, setDirection] = useState<Direction>('forward');
-  const [anchorDate, setAnchorDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [anchorDate, setAnchorDate] = useState(() => todayDateOnly());
   const [generating, setGenerating] = useState(false);
   const [selectedNode, setSelectedNode] = useState<CalNode | null>(null);
   const [editDays, setEditDays] = useState('');
@@ -135,11 +150,12 @@ export default function Calendar() {
     if (!node) return;
     setSaving(true);
     try {
-      await fetch(`${API}/projects/${projectId}/nodes/${nodeId}/date`, {
+      const res = await fetch(`${API}/projects/${projectId}/nodes/${nodeId}/date`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ due_date: newDate, estimated_days: node.estimated_days, pinned: true }),
       });
+      if (!res.ok) throw new Error('Failed to save date');
       await load();
       toast('Date updated', 'success');
     } catch (e: any) { toast(e.message || 'Failed to reschedule', 'error'); }
@@ -153,7 +169,7 @@ export default function Calendar() {
     const nid = dragNodeRef.current;
     if (!nid) return;
     const d = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), day);
-    rescheduleNode(nid, d.toISOString().split('T')[0]);
+    rescheduleNode(nid, formatDateOnly(d));
     setDragNodeId(null); setDropTargetDay(null); dragNodeRef.current = null;
   };
 
@@ -176,9 +192,9 @@ export default function Calendar() {
       if (!drag) return;
       const deltaX = e.clientX - drag.startX;
       const daysShift = Math.round((deltaX / drag.trackWidth) * Math.min(drag.totalDays, 180));
-      const orig = new Date(drag.originalDate);
+      const orig = parseDateOnly(drag.originalDate);
       orig.setDate(orig.getDate() + daysShift);
-      setGanttPreviewDate(orig.toISOString().split('T')[0]);
+      setGanttPreviewDate(formatDateOnly(orig));
       setGanttTooltipPos({ x: e.clientX, y: e.clientY - 36 });
     };
     const handleMouseUp = async (e: MouseEvent) => {
@@ -189,9 +205,9 @@ export default function Calendar() {
       ganttDragRef.current = null;
       setGanttDragNodeId(null); setGanttPreviewDate(null); setGanttTooltipPos(null);
       if (Math.abs(daysShift) === 0) return;
-      const orig = new Date(drag.originalDate);
+      const orig = parseDateOnly(drag.originalDate);
       orig.setDate(orig.getDate() + daysShift);
-      await rescheduleNode(drag.nodeId, orig.toISOString().split('T')[0]);
+      await rescheduleNode(drag.nodeId, formatDateOnly(orig));
     };
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
@@ -205,13 +221,13 @@ export default function Calendar() {
 
   // ── Derived values ────────────────────────────────────────────────────
   const nodesWithDates = nodes.filter(n => n.due_date);
-  const allDates = nodesWithDates.map(n => new Date(n.due_date!));
+  const allDates = nodesWithDates.map(n => parseDateOnly(n.due_date!));
   const minDate = allDates.length ? new Date(Math.min(...allDates.map(d => d.getTime()))) : new Date();
   const maxDate = allDates.length ? new Date(Math.max(...allDates.map(d => d.getTime()))) : new Date();
   const totalDays = Math.max(1, Math.ceil((maxDate.getTime() - minDate.getTime()) / 86400000) + 1);
   minDateRef.current = minDate;
 
-  const todayOffset = Math.ceil((new Date().getTime() - minDate.getTime()) / 86400000);
+  const todayOffset = Math.ceil((parseDateOnly(todayDateOnly()).getTime() - minDate.getTime()) / 86400000);
   const todayPct = Math.min(totalDays, 180) > 0 ? (todayOffset / Math.min(totalDays, 180)) * 100 : -1;
   const showTodayLine = todayPct >= 0 && todayPct <= 100;
 
@@ -235,7 +251,7 @@ export default function Calendar() {
   const firstDow = viewMonth.getDay();
   const monthNodesFn = (day: number) => {
     const d = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), day);
-    return filteredScheduledNodes.filter(n => n.due_date === d.toISOString().split('T')[0]);
+    return filteredScheduledNodes.filter(n => n.due_date === formatDateOnly(d));
   };
 
   const isDragging = dragNodeId !== null;
@@ -358,7 +374,7 @@ export default function Calendar() {
                 .map(node => {
                   const isDraggingThis = ganttDragNodeId === node.node_id;
                   const displayDate = isDraggingThis && ganttPreviewDate ? ganttPreviewDate : node.due_date!;
-                  const due = new Date(displayDate);
+                  const due = parseDateOnly(displayDate);
                   const start = subtractDays(due, node.estimated_days || 0);
                   const startOff = Math.max(0, Math.ceil((start.getTime() - minDate.getTime()) / 86400000));
                   const endOff = Math.ceil((due.getTime() - minDate.getTime()) / 86400000);
