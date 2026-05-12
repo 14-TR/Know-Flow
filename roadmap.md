@@ -18,8 +18,8 @@
 10. Keyboard shortcuts for power users
 
 ## Constraints
-- Private repo (Know-Flow on GitHub)
+- Public GitHub repo; do not commit private hostnames, tailnet IPs, tokens, or internal URLs
 - All work on `jig/*` branches, PRs to main
 - SQLite backend, no external DB dependencies
 - Tests must pass (482+)
-- Combined server on port 5555, Tailscale IP only
+- Combined server defaults to localhost on port 5555; set `PROJECTIQ_HOST` locally for a private network interface

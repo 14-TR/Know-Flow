@@ -2,7 +2,7 @@
  * ProjectIQ — Combined server
  * - Starts the API (Express) as a child process on localhost:5558
  * - Serves the React client (dist/) + proxies /api/* to the Express API
- * - Binds to Tailscale IP 100.98.114.122:5555
+ * - Binds to localhost by default; set PROJECTIQ_HOST for a private interface
  */
 import http from 'http';
 import fs from 'fs';
@@ -13,8 +13,8 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DIST = path.join(__dirname, 'client/dist');
 const API_INTERNAL_PORT = 5558;
-const PORT = 5555;
-const HOST = '100.98.114.122';
+const PORT = Number(process.env.PROJECTIQ_PORT || process.env.PORT || 5555);
+const HOST = process.env.PROJECTIQ_HOST || '127.0.0.1';
 
 const mime = {
   '.html': 'text/html', '.js': 'application/javascript',
@@ -58,7 +58,7 @@ setTimeout(() => {
       res.writeHead(200, headers);
       fs.createReadStream(filePath).pipe(res);
     } catch(e) { res.writeHead(500); res.end('Error'); }
-  }).listen(PORT, HOST, () => console.log(`ProjectIQ: http://${HOST}:${PORT}`));
+  }).listen(PORT, HOST, () => console.log(`ProjectIQ listening on ${HOST}:${PORT}`));
 }, 2000);
 
 process.on('SIGTERM', () => { api.kill(); process.exit(0); });

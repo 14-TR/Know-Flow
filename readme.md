@@ -2,7 +2,7 @@
 
 **AI-powered project intelligence dashboard.** Model and track complex processes as interactive knowledge graphs — with built-in Graph RAG for LLM/IDE integration.
 
-> Internal tool and portfolio piece. Private repo.
+> Internal tool and portfolio piece. Public repo; keep local hostnames, private IPs, and credentials out of committed files and PR text.
 
 ---
 
