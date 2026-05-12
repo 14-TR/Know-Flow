@@ -58,7 +58,7 @@ setTimeout(() => {
       res.writeHead(200, headers);
       fs.createReadStream(filePath).pipe(res);
     } catch(e) { res.writeHead(500); res.end('Error'); }
-  }).listen(PORT, HOST, () => console.log(`ProjectIQ: http://${HOST}:${PORT}`));
+  }).listen(PORT, HOST, () => console.log(`ProjectIQ listening on ${HOST}:${PORT}`));
 }, 2000);
 
 process.on('SIGTERM', () => { api.kill(); process.exit(0); });
