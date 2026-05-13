@@ -1,14 +1,14 @@
 # ProjectIQ
 
-**AI-powered project intelligence dashboard.** Model and track complex processes as interactive knowledge graphs — with built-in Graph RAG for LLM/IDE integration.
+**AI-powered project intelligence dashboard.** Model, run, and inspect complex process work as interactive knowledge graphs, with built-in Graph RAG for LLM/IDE integration.
 
-> Internal tool and portfolio piece. Public repo; keep local hostnames, private IPs, and credentials out of committed files and PR text.
+> Internal tool and portfolio piece. Public repo; keep private hostnames, tailnet IPs, credentials, and real client data out of committed files and PR text.
 
 ---
 
 ## What It Does
 
-ProjectIQ lets you define reusable process templates as directed graphs, then instantiate and track projects through those templates. Decisions are captured at each branch point, form data is collected per-node, and the full graph is queryable by LLMs via Graph RAG or MCP.
+ProjectIQ lets you define reusable process templates as directed graphs, then instantiate and track projects through those templates. Decisions are captured at each branch point, form data is collected per node, and the full graph is queryable by LLMs via Graph RAG or MCP.
 
 **Think:** flowchart editor + project tracker + knowledge graph, in one Apple dark mode UI.
 
@@ -49,11 +49,14 @@ ProjectIQ lets you define reusable process templates as directed graphs, then in
 - Onboarding banner for new users
 - Mobile-responsive header with hamburger nav
 - Rich demo seed data (Software Feature Development process)
+- Combined production-style server for demos: static React build plus API proxy under `/api`
 
 ---
 
 
 ## Screenshots
+
+Captured from the current combined-server demo with seeded sample data.
 
 ### Process Templates
 Browse and manage reusable workflow templates.
@@ -89,21 +92,29 @@ Inspect raw SQLite tables — useful for debugging and auditing.
 | Database | SQLite (better-sqlite3) |
 | MCP | Model Context Protocol server |
 | Containers | Docker + Docker Compose |
+| Demo Server | Node.js static server + `/api` proxy |
 
 ---
 
 ## Quick Start
 
-### Option 1: Docker
+### Option 1: Combined Demo Server
+
+Build the API and client, then run the single demo server. It serves `client/dist` and proxies API calls under `/api`.
 
 ```bash
 git clone https://github.com/14-TR/Know-Flow.git projectiq
 cd projectiq
-docker-compose up --build
+cd api && npm install && npm run build
+cd ../client && npm install && npm run build
+cd ..
+node server.mjs
 ```
 
-- Frontend: http://localhost:5173
-- API: http://localhost:3001/api
+- App: http://127.0.0.1:5555
+- API health: http://127.0.0.1:5555/api/health
+
+The combined server binds to localhost by default. For a private demo machine, set `PROJECTIQ_HOST` and optionally `PROJECTIQ_PORT` locally without committing those values.
 
 ### Option 2: Local Development
 
@@ -116,6 +127,15 @@ cd api && npm install && npm run dev
 cd client && npm install && npm run dev
 # → http://localhost:5173
 ```
+
+### Option 3: Docker
+
+```bash
+docker-compose up --build
+```
+
+- Frontend: http://localhost:5173
+- API: http://localhost:3001/api
 
 ---
 
@@ -262,6 +282,8 @@ Network share paths:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | 3001 | Backend API port |
+| `PROJECTIQ_HOST` | `127.0.0.1` | Combined server bind host |
+| `PROJECTIQ_PORT` | 5555 | Combined server public port |
 | `DATA_DIR` | `./data` | User data directory |
 | `ADMIN_DATA_DIR` | `DATA_DIR/admin` | Shared templates path |
 | `KNOWFLOW_USER` | `admin` | Username (admin = template edit) |
