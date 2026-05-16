@@ -2,7 +2,7 @@
 
 **AI-powered project intelligence dashboard.** Model, run, and inspect complex process work as interactive knowledge graphs, with built-in Graph RAG for LLM/IDE integration.
 
-> Internal tool and portfolio piece. Public repo; keep local hostnames, private IPs, and credentials out of committed files and PR text.
+> Product prototype and portfolio piece. Public repo; keep machine-specific hostnames, private IPs, and credentials out of committed files and PR text.
 
 ---
 
