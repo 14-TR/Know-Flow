@@ -7,6 +7,7 @@ import { convertParams, convertNow, parseReturning } from './helpers.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const REPO_DATABASE_DIR = path.resolve(__dirname, '../../../database');
 
 // Multi-user folder structure:
 //
@@ -252,7 +253,7 @@ export const initDatabase = () => {
 
   if (IS_ADMIN) {
     // Admin: full schema with all tables
-    const schemaPath = path.join(__dirname, '../../../database/schema.sql');
+    const schemaPath = path.join(REPO_DATABASE_DIR, 'schema.sql');
     console.log('Looking for schema at:', schemaPath);
     if (fs.existsSync(schemaPath)) {
       const schema = fs.readFileSync(schemaPath, 'utf-8');
@@ -265,7 +266,7 @@ export const initDatabase = () => {
       // Seed data if database is empty
       const processCount = db.prepare('SELECT COUNT(*) as count FROM processes').get() as { count: number };
       if (processCount.count === 0) {
-        const seedPath = path.join(__dirname, '../../../database/seed.sqlite.sql');
+        const seedPath = path.join(REPO_DATABASE_DIR, 'seed.sqlite.sql');
         if (fs.existsSync(seedPath)) {
           const seed = fs.readFileSync(seedPath, 'utf-8');
           db.exec(seed);
@@ -280,7 +281,7 @@ export const initDatabase = () => {
     }
   } else {
     // User: only project-related tables (processes/nodes/edges come from admin views)
-    const userSchemaPath = path.join(__dirname, '../../../database/schema.user.sql');
+    const userSchemaPath = path.join(REPO_DATABASE_DIR, 'schema.user.sql');
     if (fs.existsSync(userSchemaPath)) {
       const schema = fs.readFileSync(userSchemaPath, 'utf-8');
       db.exec(schema);

@@ -58,7 +58,7 @@ router.get('/', async (req: Request, res: Response) => {
       SELECT
         p.id, p.name, p.description, p.created_at,
         (SELECT COUNT(*) FROM nodes n WHERE n.process_id = p.id) as node_count,
-        (SELECT COUNT(*) FROM edges e JOIN nodes n ON e.source_id = n.id WHERE n.process_id = p.id) as edge_count
+        (SELECT COUNT(*) FROM edges e JOIN nodes n ON e.source_node_id = n.id WHERE n.process_id = p.id) as edge_count
       FROM processes p
       ORDER BY p.created_at DESC
       LIMIT 3
@@ -88,6 +88,8 @@ router.get('/', async (req: Request, res: Response) => {
         todayCompleted,
         inProgressNodes,
       },
+      projects: recentProjects,
+      processes: recentProcesses,
       recentProjects,
       recentProcesses,
     });

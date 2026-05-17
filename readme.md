@@ -98,25 +98,32 @@ Inspect raw SQLite tables — useful for debugging and auditing.
 
 ## Quick Start
 
-### Option 1: Combined Demo Server
+### Option 1: Public-Safe Local Demo
 
-Build the API and client, then run the single demo server. It serves `client/dist` and proxies API calls under `/api`.
+Use the combined server when preparing screenshots, demos, or PR verification notes. It serves the built app and API from one local origin, so public-facing writeups can say "local combined demo server" without exposing machine-specific hostnames.
 
 ```bash
-git clone https://github.com/14-TR/Know-Flow.git projectiq
-cd projectiq
 cd api && npm install && npm run build
 cd ../client && npm install && npm run build
 cd ..
 node server.mjs
 ```
 
-- App: http://127.0.0.1:5555
-- API health: http://127.0.0.1:5555/api/health
+- App + API proxy: http://localhost:5555
+- Override the bind host only for private local testing with `PROJECTIQ_HOST`; do not put private hostnames or IPs in committed docs or public PR text.
 
-The combined server binds to localhost by default. For a private demo machine, set `PROJECTIQ_HOST` and optionally `PROJECTIQ_PORT` locally without committing those values.
+### Option 2: Docker
 
-### Option 2: Local Development
+```bash
+git clone https://github.com/14-TR/Know-Flow.git projectiq
+cd projectiq
+docker-compose up --build
+```
+
+- Frontend: http://localhost:5173
+- API: http://localhost:3001/api
+
+### Option 3: Local Development
 
 ```bash
 # Backend
@@ -125,17 +132,8 @@ cd api && npm install && npm run dev
 
 # Frontend (new terminal)
 cd client && npm install && npm run dev
-# → http://localhost:5173
+# → http://localhost:5173, with /api proxied to the backend
 ```
-
-### Option 3: Docker
-
-```bash
-docker-compose up --build
-```
-
-- Frontend: http://localhost:5173
-- API: http://localhost:3001/api
 
 ---
 
@@ -288,7 +286,7 @@ Network share paths:
 | `ADMIN_DATA_DIR` | `DATA_DIR/admin` | Shared templates path |
 | `KNOWFLOW_USER` | `admin` | Username (admin = template edit) |
 | `NODE_ENV` | development | Environment mode |
-| `VITE_API_URL` | `http://localhost:3001/api` | API URL for frontend |
+| `VITE_API_URL` | `/api` | API URL for frontend; set an absolute URL only for split-origin deployments |
 
 ---
 
