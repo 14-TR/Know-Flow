@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import './DatabaseViewer.css';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
+const PAGE_SIZE = 50;
 
 interface TableCounts {
   [key: string]: number;
@@ -45,6 +46,8 @@ export default function DatabaseViewer() {
   const [tableData, setTableData] = useState<TableData | null>(null);
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchTableCounts = useCallback(async () => {
     try {
@@ -56,14 +59,23 @@ export default function DatabaseViewer() {
     }
   }, []);
 
-  const fetchTableData = useCallback(async (table: string) => {
+  const fetchTableData = useCallback(async (table: string, nextOffset = 0) => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/debug/tables/${table}?limit=50`);
+      setError(null);
+      const params = new URLSearchParams({
+        limit: String(PAGE_SIZE),
+        offset: String(nextOffset),
+      });
+      const response = await fetch(`${API_URL}/debug/tables/${table}?${params}`);
+      if (!response.ok) {
+        throw new Error(`Request failed with ${response.status}`);
+      }
       const data = await response.json();
       setTableData(data);
     } catch (error) {
       console.error('Failed to fetch table data:', error);
+      setError(error instanceof Error ? error.message : 'Failed to fetch table data');
     } finally {
       setLoading(false);
     }
@@ -71,19 +83,33 @@ export default function DatabaseViewer() {
 
   useEffect(() => {
     fetchTableCounts();
-    fetchTableData(selectedTable);
-  }, [fetchTableCounts, fetchTableData, selectedTable]);
+    fetchTableData(selectedTable, offset);
+  }, [fetchTableCounts, fetchTableData, selectedTable, offset]);
 
   useEffect(() => {
     if (!autoRefresh) return;
     const interval = setInterval(() => {
       fetchTableCounts();
-      fetchTableData(selectedTable);
+      fetchTableData(selectedTable, offset);
     }, 2000);
     return () => clearInterval(interval);
-  }, [autoRefresh, selectedTable, fetchTableCounts, fetchTableData]);
+  }, [autoRefresh, selectedTable, offset, fetchTableCounts, fetchTableData]);
 
   const columns = tableData?.rows.length ? Object.keys(tableData.rows[0]) : [];
+  const currentStart = tableData && tableData.total > 0 ? tableData.offset + 1 : 0;
+  const currentEnd = tableData ? Math.min(tableData.offset + tableData.rows.length, tableData.total) : 0;
+  const hasPreviousPage = offset > 0;
+  const hasNextPage = tableData ? tableData.offset + tableData.limit < tableData.total : false;
+
+  const handleSelectTable = (table: string) => {
+    setSelectedTable(table);
+    setOffset(0);
+  };
+
+  const handleRefresh = () => {
+    fetchTableCounts();
+    fetchTableData(selectedTable, offset);
+  };
 
   return (
     <div className="db-viewer">
@@ -105,10 +131,7 @@ export default function DatabaseViewer() {
           </label>
           <button
             className="btn btn-secondary btn-sm"
-            onClick={() => {
-              fetchTableCounts();
-              fetchTableData(selectedTable);
-            }}
+            onClick={handleRefresh}
           >
             ↻ Refresh
           </button>
@@ -124,7 +147,7 @@ export default function DatabaseViewer() {
           <button
             key={table}
             className={`db-tab${selectedTable === table ? ' active' : ''}`}
-            onClick={() => setSelectedTable(table)}
+            onClick={() => handleSelectTable(table)}
           >
             {table}
             <span className="db-tab-count">{count}</span>
@@ -138,8 +161,14 @@ export default function DatabaseViewer() {
           <div className="db-table-toolbar">
             <span className="db-table-name">{tableData.table}</span>
             <span className="db-row-count">
-              {loading ? 'Loading…' : `${tableData.rows.length} of ${tableData.total} rows`}
+              {loading ? 'Loading…' : `${currentStart}-${currentEnd} of ${tableData.total} rows`}
             </span>
+          </div>
+        )}
+
+        {error && (
+          <div className="db-error" role="alert">
+            {error}
           </div>
         )}
 
@@ -190,11 +219,11 @@ export default function DatabaseViewer() {
             <div className="db-footer">
               <span>{tableData.table}</span>
               <span className="db-footer-dot">·</span>
-              <span>{tableData.rows.length} of {tableData.total} rows</span>
+              <span>{currentStart}-{currentEnd} of {tableData.total} rows</span>
               {tableData.total > tableData.limit && (
                 <>
                   <span className="db-footer-dot">·</span>
-                  <span>showing first {tableData.limit}</span>
+                  <span>page size {tableData.limit}</span>
                 </>
               )}
               {autoRefresh && (
@@ -203,6 +232,22 @@ export default function DatabaseViewer() {
                   <span style={{ color: 'var(--success)' }}>● live</span>
                 </>
               )}
+              <div className="db-pagination">
+                <button
+                  className="btn btn-secondary btn-sm"
+                  disabled={!hasPreviousPage || loading}
+                  onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
+                >
+                  Previous
+                </button>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  disabled={!hasNextPage || loading}
+                  onClick={() => setOffset(offset + PAGE_SIZE)}
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </>
         ) : null}
