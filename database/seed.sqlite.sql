@@ -453,7 +453,7 @@ WHERE project_id = 'p3333333-3333-4333-8333-333333333333' AND node_id = 'fa00000
 -- Write Requirements — complete
 UPDATE project_node_statuses SET status = 'complete',
   started_at = datetime('now', '-10 days'), completed_at = datetime('now', '-9 days'),
-  form_data = '{"docLink": "https://docs.internal/auth-requirements-v2", "acceptanceCriteria": "1. Register with email/password
+  form_data = '{"docLink": "https://example.com/projectiq-demo/auth-requirements-v2", "acceptanceCriteria": "1. Register with email/password
 2. JWT access tokens expire in 15min
 3. Refresh tokens rotate on use
 4. Remember-me extends to 30 days
@@ -469,7 +469,7 @@ WHERE project_id = 'p3333333-3333-4333-8333-333333333333' AND node_id = 'fa00000
 -- Design & Architecture — complete
 UPDATE project_node_statuses SET status = 'complete',
   started_at = datetime('now', '-7 days'), completed_at = datetime('now', '-5 days'),
-  form_data = '{"designDocUrl": "https://docs.internal/auth-arch-v1", "techStack": "Node.js, Express, jsonwebtoken, bcrypt, Redis (token blacklist)", "dbChanges": "Yes"}'
+  form_data = '{"designDocUrl": "https://example.com/projectiq-demo/auth-arch-v1", "techStack": "Node.js, Express, jsonwebtoken, bcrypt, Redis (token blacklist)", "dbChanges": "Yes"}'
 WHERE project_id = 'p3333333-3333-4333-8333-333333333333' AND node_id = 'fa000005-0000-4000-8000-000000000005';
 
 -- Design Approved? — complete, Yes
@@ -483,4 +483,3 @@ UPDATE project_node_statuses SET status = 'in_progress',
   started_at = datetime('now', '-3 days'),
   form_data = '{"branch": "feature/jwt-auth-refresh", "prUrl": "", "startDate": "2026-03-11", "devNotes": "DB schema migration complete. Working on refresh token rotation logic and Redis integration."}'
 WHERE project_id = 'p3333333-3333-4333-8333-333333333333' AND node_id = 'fa000007-0000-4000-8000-000000000007';
-
