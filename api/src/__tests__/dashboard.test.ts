@@ -85,6 +85,9 @@ describe('Dashboard route', () => {
       if (sql.includes("status = 'in_progress'")) {
         return { get: () => ({ count: 0 }) };
       }
+      if (sql.includes('ready_nodes') && sql.includes('blocked_nodes')) {
+        return { get: () => ({ ready_nodes: 2, blocked_nodes: 1 }) };
+      }
 
       throw new Error(`Unexpected SQL: ${sql}`);
     });
@@ -92,6 +95,8 @@ describe('Dashboard route', () => {
     const res = await request(app, '/api/dashboard');
 
     expect(res.status).toBe(200);
+    expect((res.body as { stats: { readyNodes: number; blockedNodes: number } }).stats.readyNodes).toBe(2);
+    expect((res.body as { stats: { readyNodes: number; blockedNodes: number } }).stats.blockedNodes).toBe(1);
     expect((res.body as { recentProcesses: unknown[] }).recentProcesses).toHaveLength(1);
     expect((res.body as { processes: unknown[] }).processes).toHaveLength(1);
     expect((res.body as { projects: unknown[] }).projects).toHaveLength(0);
@@ -99,5 +104,9 @@ describe('Dashboard route', () => {
     const recentProcessSql = sqlStatements.find((sql) => sql.includes('FROM processes p'));
     expect(recentProcessSql).toContain('e.source_node_id = n.id');
     expect(recentProcessSql).not.toContain('e.source_id');
+
+    const workflowSignalSql = sqlStatements.find((sql) => sql.includes('ready_nodes'));
+    expect(workflowSignalSql).toContain('e.target_node_id = ns.node_id');
+    expect(workflowSignalSql).toContain("NOT IN ('complete', 'skipped')");
   });
 });

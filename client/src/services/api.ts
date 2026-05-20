@@ -451,6 +451,8 @@ export interface DashboardStats {
   avgCompletion: number;
   todayCompleted: number;
   inProgressNodes: number;
+  readyNodes: number;
+  blockedNodes: number;
 }
 
 export interface DashboardProject {

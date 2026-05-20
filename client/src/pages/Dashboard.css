@@ -285,6 +285,16 @@
   color: var(--success);
 }
 
+.dash-stat-chip--accent {
+  background: var(--accent-dim);
+  color: var(--accent-hover);
+}
+
+.dash-stat-chip--warning {
+  background: var(--warning-dim);
+  color: var(--warning);
+}
+
 .dash-stat-chip--muted {
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-tertiary);
