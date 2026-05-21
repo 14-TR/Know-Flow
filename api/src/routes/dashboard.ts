@@ -131,6 +131,72 @@ router.get('/', async (req: Request, res: Response) => {
         ON ps.project_id = ns.project_id AND ps.node_id = ns.node_id
     `).get() as { ready_nodes: number | null; blocked_nodes: number | null };
 
+    const attentionItems = db.prepare(`
+      WITH node_statuses AS (
+        SELECT
+          p.id AS project_id,
+          p.name AS project_name,
+          n.id AS node_id,
+          n.title,
+          n.type,
+          COALESCE(pns.status, 'not_started') AS status
+        FROM projects p
+        JOIN nodes n ON n.process_id = p.process_id
+        LEFT JOIN project_node_statuses pns
+          ON pns.project_id = p.id AND pns.node_id = n.id
+        WHERE p.status = 'active'
+      ),
+      predecessor_statuses AS (
+        SELECT
+          ns.project_id,
+          ns.node_id,
+          COUNT(e.source_node_id) AS predecessor_count,
+          SUM(
+            CASE
+              WHEN COALESCE(source_ns.status, 'not_started') NOT IN ('complete', 'skipped')
+              THEN 1
+              ELSE 0
+            END
+          ) AS open_predecessor_count
+        FROM node_statuses ns
+        LEFT JOIN edges e ON e.target_node_id = ns.node_id
+        LEFT JOIN node_statuses source_ns
+          ON source_ns.project_id = ns.project_id
+         AND source_ns.node_id = e.source_node_id
+        GROUP BY ns.project_id, ns.node_id
+      )
+      SELECT
+        ns.project_id,
+        ns.project_name,
+        ns.node_id,
+        ns.title,
+        ns.type,
+        CASE
+          WHEN COALESCE(ps.predecessor_count, 0) > 0
+           AND COALESCE(ps.open_predecessor_count, 0) > 0
+          THEN 'blocked'
+          ELSE 'ready'
+        END AS attention_type,
+        COALESCE(ps.open_predecessor_count, 0) AS blocker_count
+      FROM node_statuses ns
+      LEFT JOIN predecessor_statuses ps
+        ON ps.project_id = ns.project_id AND ps.node_id = ns.node_id
+      WHERE ns.status = 'not_started'
+        AND (
+          COALESCE(ps.open_predecessor_count, 0) = 0
+          OR (
+            COALESCE(ps.predecessor_count, 0) > 0
+            AND COALESCE(ps.open_predecessor_count, 0) > 0
+          )
+        )
+      ORDER BY
+        CASE attention_type WHEN 'blocked' THEN 0 ELSE 1 END,
+        blocker_count DESC,
+        ns.project_name ASC,
+        ns.title ASC
+      LIMIT 6
+    `).all();
+
     res.json({
       stats: {
         processCount,
@@ -149,6 +215,7 @@ router.get('/', async (req: Request, res: Response) => {
       processes: recentProcesses,
       recentProjects,
       recentProcesses,
+      attentionItems,
     });
   } catch (err) {
     console.error('Dashboard error:', err);

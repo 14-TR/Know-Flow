@@ -474,10 +474,21 @@ export interface DashboardProcess {
   created_at: string;
 }
 
+export interface DashboardAttentionItem {
+  project_id: string;
+  project_name: string;
+  node_id: string;
+  title: string;
+  type: string;
+  attention_type: 'blocked' | 'ready';
+  blocker_count: number;
+}
+
 export interface DashboardData {
   stats: DashboardStats;
   recentProjects: DashboardProject[];
   recentProcesses: DashboardProcess[];
+  attentionItems: DashboardAttentionItem[];
 }
 
 export const getDashboard = () => fetchApi<DashboardData>('/dashboard');
