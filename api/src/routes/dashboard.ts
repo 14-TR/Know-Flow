@@ -76,6 +76,61 @@ router.get('/', async (req: Request, res: Response) => {
       SELECT COUNT(*) as count FROM project_node_statuses WHERE status = 'in_progress'
     `).get() as { count: number }).count;
 
+    // Active workflow signal: nodes ready to start vs. blocked by unfinished predecessors.
+    const workflowSignal = db.prepare(`
+      WITH node_statuses AS (
+        SELECT
+          p.id AS project_id,
+          n.id AS node_id,
+          COALESCE(pns.status, 'not_started') AS status
+        FROM projects p
+        JOIN nodes n ON n.process_id = p.process_id
+        LEFT JOIN project_node_statuses pns
+          ON pns.project_id = p.id AND pns.node_id = n.id
+        WHERE p.status = 'active'
+      ),
+      predecessor_statuses AS (
+        SELECT
+          ns.project_id,
+          ns.node_id,
+          COUNT(e.source_node_id) AS predecessor_count,
+          SUM(
+            CASE
+              WHEN COALESCE(source_ns.status, 'not_started') NOT IN ('complete', 'skipped')
+              THEN 1
+              ELSE 0
+            END
+          ) AS open_predecessor_count
+        FROM node_statuses ns
+        LEFT JOIN edges e ON e.target_node_id = ns.node_id
+        LEFT JOIN node_statuses source_ns
+          ON source_ns.project_id = ns.project_id
+         AND source_ns.node_id = e.source_node_id
+        GROUP BY ns.project_id, ns.node_id
+      )
+      SELECT
+        SUM(
+          CASE
+            WHEN ns.status = 'not_started'
+             AND COALESCE(ps.open_predecessor_count, 0) = 0
+            THEN 1
+            ELSE 0
+          END
+        ) AS ready_nodes,
+        SUM(
+          CASE
+            WHEN ns.status = 'not_started'
+             AND COALESCE(ps.predecessor_count, 0) > 0
+             AND COALESCE(ps.open_predecessor_count, 0) > 0
+            THEN 1
+            ELSE 0
+          END
+        ) AS blocked_nodes
+      FROM node_statuses ns
+      LEFT JOIN predecessor_statuses ps
+        ON ps.project_id = ns.project_id AND ps.node_id = ns.node_id
+    `).get() as { ready_nodes: number | null; blocked_nodes: number | null };
+
     res.json({
       stats: {
         processCount,
@@ -87,6 +142,8 @@ router.get('/', async (req: Request, res: Response) => {
         avgCompletion,
         todayCompleted,
         inProgressNodes,
+        readyNodes: workflowSignal.ready_nodes ?? 0,
+        blockedNodes: workflowSignal.blocked_nodes ?? 0,
       },
       projects: recentProjects,
       processes: recentProcesses,

@@ -199,6 +199,8 @@ export default function Dashboard() {
             </div>
             <div className="dash-stat-breakdown">
               <span className="dash-stat-chip dash-stat-chip--success">{stats.todayCompleted} done today</span>
+              <span className="dash-stat-chip dash-stat-chip--accent">{stats.readyNodes} ready next</span>
+              <span className="dash-stat-chip dash-stat-chip--warning">{stats.blockedNodes} blocked</span>
             </div>
           </div>
 
