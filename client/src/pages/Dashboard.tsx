@@ -50,7 +50,7 @@ export default function Dashboard() {
     );
   }
 
-  const { stats, recentProjects, recentProcesses } = data;
+  const { stats, recentProjects, recentProcesses, attentionItems } = data;
   const isFirstRun = stats.projectTotal === 0 || stats.processCount === 0;
   const setupSteps: SetupStep[] = [
     {
@@ -220,6 +220,47 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        {!isFirstRun && (
+          <section className="dash-attention" aria-label="Needs attention">
+            <div className="dash-section-header">
+              <div>
+                <h2 className="dash-section-title">Needs attention</h2>
+                <p className="dash-section-note">Blocked and ready nodes across active projects.</p>
+              </div>
+              <button className="dash-section-link" onClick={() => navigate('/projects')}>Open tracker →</button>
+            </div>
+            {attentionItems.length === 0 ? (
+              <div className="dash-empty dash-empty--compact">
+                <p>No blocked or ready nodes in active projects.</p>
+              </div>
+            ) : (
+              <div className="dash-attention-list">
+                {attentionItems.map((item) => (
+                  <button
+                    key={`${item.project_id}-${item.node_id}`}
+                    className="dash-attention-row"
+                    onClick={() => navigate(`/project/${item.project_id}`)}
+                  >
+                    <span className={`dash-attention-pill dash-attention-pill--${item.attention_type}`}>
+                      {item.attention_type === 'blocked' ? 'Blocked' : 'Ready'}
+                    </span>
+                    <span className="dash-attention-main">
+                      <span className="dash-attention-title">{item.title}</span>
+                      <span className="dash-attention-meta">
+                        {item.project_name} · {item.type}
+                      </span>
+                      <span className="dash-attention-reason">
+                        {item.reason}
+                      </span>
+                    </span>
+                    <span className="dash-attention-arrow">→</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         <div className="dash-main-grid">
           <div className="dash-section">

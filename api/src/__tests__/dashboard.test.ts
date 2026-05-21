@@ -88,6 +88,32 @@ describe('Dashboard route', () => {
       if (sql.includes('ready_nodes') && sql.includes('blocked_nodes')) {
         return { get: () => ({ ready_nodes: 2, blocked_nodes: 1 }) };
       }
+      if (sql.includes('attention_type') && sql.includes('LIMIT 6')) {
+        return {
+          all: () => [
+            {
+              project_id: 'proj-1',
+              project_name: 'Client launch',
+              node_id: 'node-blocked',
+              title: 'Approve scope',
+              type: 'decision',
+              attention_type: 'blocked',
+              blocker_count: 2,
+              reason: '2 predecessors still open',
+            },
+            {
+              project_id: 'proj-1',
+              project_name: 'Client launch',
+              node_id: 'node-ready',
+              title: 'Schedule kickoff',
+              type: 'task',
+              attention_type: 'ready',
+              blocker_count: 0,
+              reason: 'No predecessors; ready to start',
+            },
+          ],
+        };
+      }
 
       throw new Error(`Unexpected SQL: ${sql}`);
     });
@@ -100,6 +126,11 @@ describe('Dashboard route', () => {
     expect((res.body as { recentProcesses: unknown[] }).recentProcesses).toHaveLength(1);
     expect((res.body as { processes: unknown[] }).processes).toHaveLength(1);
     expect((res.body as { projects: unknown[] }).projects).toHaveLength(0);
+    expect((res.body as { attentionItems: unknown[] }).attentionItems).toHaveLength(2);
+    expect((res.body as { attentionItems: { attention_type: string; reason: string }[] }).attentionItems[0]).toMatchObject({
+      attention_type: 'blocked',
+      reason: '2 predecessors still open',
+    });
 
     const recentProcessSql = sqlStatements.find((sql) => sql.includes('FROM processes p'));
     expect(recentProcessSql).toContain('e.source_node_id = n.id');
@@ -108,5 +139,11 @@ describe('Dashboard route', () => {
     const workflowSignalSql = sqlStatements.find((sql) => sql.includes('ready_nodes'));
     expect(workflowSignalSql).toContain('e.target_node_id = ns.node_id');
     expect(workflowSignalSql).toContain("NOT IN ('complete', 'skipped')");
+
+    const attentionItemsSql = sqlStatements.find((sql) => sql.includes('attention_type'));
+    expect(attentionItemsSql).toContain('LIMIT 6');
+    expect(attentionItemsSql).toContain("CASE attention_type WHEN 'blocked' THEN 0 ELSE 1 END");
+    expect(attentionItemsSql).toContain('AS reason');
+    expect(attentionItemsSql).toContain('All predecessors complete or skipped');
   });
 });
