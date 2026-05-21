@@ -482,6 +482,7 @@ export interface DashboardAttentionItem {
   type: string;
   attention_type: 'blocked' | 'ready';
   blocker_count: number;
+  reason: string;
 }
 
 export interface DashboardData {

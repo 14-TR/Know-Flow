@@ -415,7 +415,7 @@
 .dash-attention-row {
   width: 100%;
   min-width: 0;
-  min-height: 76px;
+  min-height: 84px;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -464,7 +464,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.18rem;
 }
 
 .dash-attention-title {
@@ -479,6 +479,15 @@
 
 .dash-attention-meta {
   color: var(--text-tertiary);
+  font-size: 0.75rem;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dash-attention-reason {
+  color: var(--text-secondary);
   font-size: 0.75rem;
   line-height: 1.3;
   white-space: nowrap;

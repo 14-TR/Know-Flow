@@ -249,9 +249,9 @@ export default function Dashboard() {
                       <span className="dash-attention-title">{item.title}</span>
                       <span className="dash-attention-meta">
                         {item.project_name} · {item.type}
-                        {item.attention_type === 'blocked' && item.blocker_count > 0
-                          ? ` · ${item.blocker_count} blocker${item.blocker_count === 1 ? '' : 's'}`
-                          : ''}
+                      </span>
+                      <span className="dash-attention-reason">
+                        {item.reason}
                       </span>
                     </span>
                     <span className="dash-attention-arrow">→</span>

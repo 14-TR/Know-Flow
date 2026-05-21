@@ -177,7 +177,19 @@ router.get('/', async (req: Request, res: Response) => {
           THEN 'blocked'
           ELSE 'ready'
         END AS attention_type,
-        COALESCE(ps.open_predecessor_count, 0) AS blocker_count
+        COALESCE(ps.open_predecessor_count, 0) AS blocker_count,
+        CASE
+          WHEN COALESCE(ps.predecessor_count, 0) > 0
+           AND COALESCE(ps.open_predecessor_count, 0) > 0
+          THEN printf(
+            '%d predecessor%s still open',
+            COALESCE(ps.open_predecessor_count, 0),
+            CASE COALESCE(ps.open_predecessor_count, 0) WHEN 1 THEN '' ELSE 's' END
+          )
+          WHEN COALESCE(ps.predecessor_count, 0) = 0
+          THEN 'No predecessors; ready to start'
+          ELSE 'All predecessors complete or skipped'
+        END AS reason
       FROM node_statuses ns
       LEFT JOIN predecessor_statuses ps
         ON ps.project_id = ns.project_id AND ps.node_id = ns.node_id
