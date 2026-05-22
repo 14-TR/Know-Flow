@@ -297,8 +297,8 @@ router.get('/:id', async (req: Request, res: Response) => {
       [id, project.process_id]
     );
 
-    // Get current active nodes
-    // Note: SQLite requires each ? placeholder to have its own parameter value
+    // Get nodes that are active or ready to become active.
+    // Root/start nodes with initialized not_started statuses must be included.
     const currentNodesResult = await query(
       `SELECT
         n.id AS node_id,
@@ -310,20 +310,17 @@ router.get('/:id', async (req: Request, res: Response) => {
       LEFT JOIN project_node_statuses pns ON pns.node_id = n.id AND pns.project_id = $1
       WHERE p.id = $2
       AND (
-        (n.type = 'start' AND pns.status IS NULL)
-        OR pns.status = 'in_progress'
+        pns.status = 'in_progress'
         OR (
-          COALESCE(pns.status, 'not_started') NOT IN ('complete', 'skipped')
+          COALESCE(pns.status, 'not_started') = 'not_started'
           AND NOT EXISTS (
             SELECT 1 FROM edges e
-            INNER JOIN project_node_statuses pred_status
+            LEFT JOIN project_node_statuses pred_status
               ON pred_status.node_id = e.source_node_id
               AND pred_status.project_id = $3
             WHERE e.target_node_id = n.id
-            AND pred_status.status NOT IN ('complete', 'skipped')
-          )
-          AND EXISTS (
-            SELECT 1 FROM edges e WHERE e.target_node_id = n.id
+              AND e.process_id = p.process_id
+              AND COALESCE(pred_status.status, 'not_started') NOT IN ('complete', 'skipped')
           )
         )
       )`,
