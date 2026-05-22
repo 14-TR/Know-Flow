@@ -247,3 +247,52 @@ describe('Project brief route', () => {
     expect((res.body as { error: string }).error).toContain('Project not found');
   });
 });
+
+describe('Project detail current nodes', () => {
+  let app: Express;
+
+  beforeEach(() => {
+    app = createTestApp();
+    vi.clearAllMocks();
+  });
+
+  it('treats initialized root/start nodes as current work', async () => {
+    vi.mocked(db.query)
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'proj-1',
+            name: 'Alpha',
+            process_id: 'proc-1',
+            process_name: 'Launch process',
+            status: 'active',
+          },
+        ],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 })
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            node_id: 'start-1',
+            node_title: 'Kickoff',
+            node_type: 'start',
+            status: 'not_started',
+          },
+        ],
+        rowCount: 1,
+      });
+
+    const res = await request(app, 'GET', '/api/projects/proj-1');
+
+    expect(res.status).toBe(200);
+    expect((res.body as { currentNodes: unknown[] }).currentNodes).toHaveLength(1);
+
+    const currentNodesSql = vi.mocked(db.query).mock.calls[3][0] as string;
+    expect(currentNodesSql).toContain("COALESCE(pns.status, 'not_started') = 'not_started'");
+    expect(currentNodesSql).toContain('LEFT JOIN project_node_statuses pred_status');
+    expect(currentNodesSql).toContain("COALESCE(pred_status.status, 'not_started') NOT IN ('complete', 'skipped')");
+    expect(currentNodesSql).not.toContain("n.type = 'start' AND pns.status IS NULL");
+  });
+});
