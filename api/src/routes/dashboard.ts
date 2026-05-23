@@ -164,6 +164,19 @@ router.get('/', async (req: Request, res: Response) => {
           ON source_ns.project_id = ns.project_id
          AND source_ns.node_id = e.source_node_id
         GROUP BY ns.project_id, ns.node_id
+      ),
+      blocking_predecessors AS (
+        SELECT
+          ns.project_id,
+          ns.node_id,
+          GROUP_CONCAT(source_ns.title, ', ') AS blocker_titles
+        FROM node_statuses ns
+        JOIN edges e ON e.target_node_id = ns.node_id
+        JOIN node_statuses source_ns
+          ON source_ns.project_id = ns.project_id
+         AND source_ns.node_id = e.source_node_id
+        WHERE COALESCE(source_ns.status, 'not_started') NOT IN ('complete', 'skipped')
+        GROUP BY ns.project_id, ns.node_id
       )
       SELECT
         ns.project_id,
@@ -178,14 +191,11 @@ router.get('/', async (req: Request, res: Response) => {
           ELSE 'ready'
         END AS attention_type,
         COALESCE(ps.open_predecessor_count, 0) AS blocker_count,
+        COALESCE(bp.blocker_titles, '') AS blocker_titles,
         CASE
           WHEN COALESCE(ps.predecessor_count, 0) > 0
            AND COALESCE(ps.open_predecessor_count, 0) > 0
-          THEN printf(
-            '%d predecessor%s still open',
-            COALESCE(ps.open_predecessor_count, 0),
-            CASE COALESCE(ps.open_predecessor_count, 0) WHEN 1 THEN '' ELSE 's' END
-          )
+          THEN printf('Waiting on %s', COALESCE(NULLIF(bp.blocker_titles, ''), 'upstream work'))
           WHEN COALESCE(ps.predecessor_count, 0) = 0
           THEN 'No predecessors; ready to start'
           ELSE 'All predecessors complete or skipped'
@@ -193,6 +203,8 @@ router.get('/', async (req: Request, res: Response) => {
       FROM node_statuses ns
       LEFT JOIN predecessor_statuses ps
         ON ps.project_id = ns.project_id AND ps.node_id = ns.node_id
+      LEFT JOIN blocking_predecessors bp
+        ON bp.project_id = ns.project_id AND bp.node_id = ns.node_id
       WHERE ns.status = 'not_started'
         AND (
           COALESCE(ps.open_predecessor_count, 0) = 0

@@ -99,7 +99,8 @@ describe('Dashboard route', () => {
               type: 'decision',
               attention_type: 'blocked',
               blocker_count: 2,
-              reason: '2 predecessors still open',
+              blocker_titles: 'Write brief, Approve budget',
+              reason: 'Waiting on Write brief, Approve budget',
             },
             {
               project_id: 'proj-1',
@@ -109,6 +110,7 @@ describe('Dashboard route', () => {
               type: 'task',
               attention_type: 'ready',
               blocker_count: 0,
+              blocker_titles: '',
               reason: 'No predecessors; ready to start',
             },
           ],
@@ -127,9 +129,10 @@ describe('Dashboard route', () => {
     expect((res.body as { processes: unknown[] }).processes).toHaveLength(1);
     expect((res.body as { projects: unknown[] }).projects).toHaveLength(0);
     expect((res.body as { attentionItems: unknown[] }).attentionItems).toHaveLength(2);
-    expect((res.body as { attentionItems: { attention_type: string; reason: string }[] }).attentionItems[0]).toMatchObject({
+    expect((res.body as { attentionItems: { attention_type: string; blocker_titles: string; reason: string }[] }).attentionItems[0]).toMatchObject({
       attention_type: 'blocked',
-      reason: '2 predecessors still open',
+      blocker_titles: 'Write brief, Approve budget',
+      reason: 'Waiting on Write brief, Approve budget',
     });
 
     const recentProcessSql = sqlStatements.find((sql) => sql.includes('FROM processes p'));
@@ -144,6 +147,8 @@ describe('Dashboard route', () => {
     expect(attentionItemsSql).toContain('LIMIT 6');
     expect(attentionItemsSql).toContain("CASE attention_type WHEN 'blocked' THEN 0 ELSE 1 END");
     expect(attentionItemsSql).toContain('AS reason');
+    expect(attentionItemsSql).toContain('GROUP_CONCAT(source_ns.title');
+    expect(attentionItemsSql).toContain('AS blocker_titles');
     expect(attentionItemsSql).toContain('All predecessors complete or skipped');
   });
 });
