@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- Reconciled the demo-readiness roadmap with the current merged GitHub history so future slices start from current `main` instead of stale completed work.
+
 ---
 
 ## [1.3.0] - 2026-03-24
@@ -15,9 +18,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 #### Onboarding & Demo Experience
-- `WelcomeModal` — first-launch modal with feature overview and call-to-action
-- `OnboardingBanner` — persistent top-of-page guide for new users (dismissible)
-- Demo seed API (`POST /api/demo/seed`) — re-loads realistic sample data on demand
+- `WelcomeModal` - first-launch modal with feature overview and call-to-action
+- `OnboardingBanner` - persistent top-of-page guide for new users (dismissible)
+- Demo seed API (`POST /api/demo/seed`) - re-loads realistic sample data on demand
 - Rich seed data: Software Feature Development process + 2 in-progress projects
 - Property Development Process seed with 17 nodes
 
@@ -40,7 +43,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-#### Design — Apple Dark Mode Pass
+#### Design - Apple Dark Mode Pass
 - Full dark mode redesign for Calendar page
 - Full dark mode redesign for ProcessEditor page
 - Full dark mode redesign for DatabaseViewer page
