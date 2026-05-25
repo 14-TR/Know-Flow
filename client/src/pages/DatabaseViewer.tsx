@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import './DatabaseViewer.css';
 
@@ -15,6 +15,10 @@ interface TableData {
   total: number;
   limit: number;
   offset: number;
+}
+
+function getFetchErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
 }
 
 // Classify a cell value for styling
@@ -47,22 +51,35 @@ export default function DatabaseViewer() {
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [offset, setOffset] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  const [countsError, setCountsError] = useState<string | null>(null);
+  const [dataError, setDataError] = useState<string | null>(null);
+  const [showingStaleData, setShowingStaleData] = useState(false);
+  const tableDataRef = useRef<TableData | null>(null);
+
+  useEffect(() => {
+    tableDataRef.current = tableData;
+  }, [tableData]);
 
   const fetchTableCounts = useCallback(async () => {
     try {
       const response = await fetch(`${API_URL}/debug/tables`);
+      if (!response.ok) {
+        throw new Error(`Table list request failed with ${response.status}`);
+      }
       const data = await response.json();
       setTableCounts(data.tables);
+      setCountsError(null);
     } catch (error) {
       console.error('Failed to fetch table counts:', error);
+      setCountsError(getFetchErrorMessage(error, 'Failed to load database tables'));
     }
   }, []);
 
   const fetchTableData = useCallback(async (table: string, nextOffset = 0) => {
     try {
       setLoading(true);
-      setError(null);
+      setDataError(null);
+      setShowingStaleData(false);
       const params = new URLSearchParams({
         limit: String(PAGE_SIZE),
         offset: String(nextOffset),
@@ -75,7 +92,14 @@ export default function DatabaseViewer() {
       setTableData(data);
     } catch (error) {
       console.error('Failed to fetch table data:', error);
-      setError(error instanceof Error ? error.message : 'Failed to fetch table data');
+      setDataError(getFetchErrorMessage(error, 'Failed to fetch table data'));
+      const currentData = tableDataRef.current;
+      const staleDataMatchesRequest =
+        currentData?.table === table && currentData.offset === nextOffset;
+      setShowingStaleData(Boolean(staleDataMatchesRequest));
+      if (!staleDataMatchesRequest) {
+        setTableData(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -166,15 +190,41 @@ export default function DatabaseViewer() {
           </div>
         )}
 
-        {error && (
+        {countsError && (
           <div className="db-error" role="alert">
-            {error}
+            <div>
+              <strong>Could not refresh table list.</strong>
+              <span>{countsError}</span>
+            </div>
+            <button className="btn btn-secondary btn-sm" onClick={fetchTableCounts}>
+              Retry
+            </button>
+          </div>
+        )}
+
+        {dataError && (
+          <div className="db-error" role="alert">
+            <div>
+              <strong>{showingStaleData ? 'Showing last loaded rows.' : 'Could not load table data.'}</strong>
+              <span>{dataError}</span>
+            </div>
+            <button className="btn btn-secondary btn-sm" onClick={() => fetchTableData(selectedTable, offset)}>
+              Retry
+            </button>
           </div>
         )}
 
         {loading && !tableData ? (
           <div className="empty-state">
             <p>Loading…</p>
+          </div>
+        ) : dataError && !tableData ? (
+          <div className="empty-state">
+            <h3>Database table unavailable</h3>
+            <p>The selected table could not be loaded.</p>
+            <button className="btn btn-primary" onClick={() => fetchTableData(selectedTable, offset)}>
+              Retry
+            </button>
           </div>
         ) : tableData ? (
           <>
