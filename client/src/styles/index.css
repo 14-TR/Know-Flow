@@ -1324,6 +1324,31 @@ body {
   flex-wrap: wrap;
 }
 
+.onboarding-banner-actions .btn {
+  min-height: 36px;
+  white-space: normal;
+}
+
+@media (max-width: 640px) {
+  .onboarding-banner {
+    padding: 1rem;
+  }
+
+  .onboarding-banner-header {
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .onboarding-banner-actions {
+    flex-direction: column;
+  }
+
+  .onboarding-banner-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 /* ============================================
    Toast Notifications
    ============================================ */

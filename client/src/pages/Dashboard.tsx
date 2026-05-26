@@ -330,7 +330,7 @@ export default function Dashboard() {
         </div>
 
         <div className="dash-quick-actions">
-          <h2 className="dash-section-title" style={{ marginBottom: '1rem' }}>
+          <h2 className="dash-section-title dash-quick-actions-title">
             {isFirstRun ? 'Guided actions' : 'Quick Actions'}
           </h2>
           <div className="dash-actions-grid">
