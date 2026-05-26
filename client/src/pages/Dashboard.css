@@ -187,6 +187,13 @@
   flex: 1;
 }
 
+.dash-setup-step .btn {
+  align-self: flex-start;
+  max-width: 100%;
+  min-height: 36px;
+  white-space: normal;
+}
+
 /* ============================================
    Stats Grid
    ============================================ */
@@ -676,6 +683,10 @@
   padding: 1.25rem;
 }
 
+.dash-quick-actions-title {
+  margin-bottom: 1rem;
+}
+
 .dash-actions-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -695,6 +706,7 @@
   transition: var(--transition);
   font-family: inherit;
   min-width: 0;
+  min-height: 118px;
 }
 
 .dash-action-btn:hover {
@@ -742,6 +754,7 @@
   color: var(--text-secondary);
   text-align: center;
   line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 
 /* ============================================
@@ -848,6 +861,11 @@
     padding: 1.1rem;
   }
 
+  .dash-setup-step .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
   .dash-setup-progress {
     width: 100%;
     min-width: 0;
@@ -885,6 +903,11 @@
   .dash-process-row,
   .dash-attention-row {
     padding: 0.875rem 1rem;
+  }
+
+  .dash-process-meta {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .dash-project-right {
@@ -926,6 +949,7 @@
 
   .dash-action-btn {
     padding: 0.875rem 0.5rem;
+    min-height: 112px;
   }
 
   .dash-project-row {

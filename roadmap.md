@@ -12,7 +12,7 @@
 
 ## Priority Queue
 
-1. Mobile-responsive everything - run a fresh iPhone-width pass across Dashboard, ProcessEditor, Graph Explorer, Project Tracker, Calendar, and Database Viewer.
+1. Mobile-responsive everything - Dashboard first-run/mobile controls now have a layout guard; continue the fresh iPhone-width pass across ProcessEditor, Graph Explorer, Project Tracker, Calendar, and Database Viewer.
 2. ProcessEditor polish - revisit the old glass-pass branch only as design reference, then rebuild any still-useful improvements from current `main`.
 3. First-user validation packet - create a short local demo script with screenshots, expected seeded data state, and failure-recovery notes for interview/demo use.
 4. Performance audit - measure current initial load and route chunks after the recent dashboard work; only optimize regressions found in the fresh measurement.
