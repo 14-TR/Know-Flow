@@ -178,6 +178,70 @@ describe('Project brief route', () => {
     ).toBe(1);
   });
 
+  it('does not count downstream untouched nodes as blocked before start begins', async () => {
+    vi.mocked(db.query)
+      .mockResolvedValueOnce({
+        rows: [{ id: 'proj-1', name: 'Alpha', process_id: 'proc-1', status: 'active' }],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            node_id: 'node-1',
+            title: 'Start',
+            type: 'start',
+            status: null,
+            decision_result: null,
+            assigned_to: null,
+            notes: null,
+            started_at: null,
+            completed_at: null,
+          },
+          {
+            node_id: 'node-2',
+            title: 'Document Schema',
+            type: 'task',
+            status: null,
+            decision_result: null,
+            assigned_to: null,
+            notes: null,
+            started_at: null,
+            completed_at: null,
+          },
+          {
+            node_id: 'node-3',
+            title: 'Build prototype',
+            type: 'task',
+            status: null,
+            decision_result: null,
+            assigned_to: null,
+            notes: null,
+            started_at: null,
+            completed_at: null,
+          },
+        ],
+        rowCount: 3,
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          { source_node_id: 'node-1', target_node_id: 'node-2' },
+          { source_node_id: 'node-2', target_node_id: 'node-3' },
+        ],
+        rowCount: 2,
+      });
+
+    const res = await request(app, 'GET', '/api/projects/proj-1/brief');
+
+    expect(res.status).toBe(200);
+    expect((res.body as { summary: string }).summary).toContain('1 ready to start');
+    expect((res.body as { blockers: string[] }).blockers).toEqual([]);
+    expect((res.body as { stats: { blocked: number } }).stats.blocked).toBe(0);
+    expect((res.body as { upcoming: string[] }).upcoming).toEqual(['Start']);
+    expect(
+      (res.body as { suggested_next_action: { title: string } }).suggested_next_action.title
+    ).toBe('Start');
+  });
+
   it('keeps pending decisions as the suggested next action', async () => {
     vi.mocked(db.query)
       .mockResolvedValueOnce({
@@ -238,6 +302,39 @@ describe('Project brief route', () => {
     ).toBe('Choose deployment path');
   });
 
+  it('does not duplicate start-node titles in upcoming copy', async () => {
+    vi.mocked(db.query)
+      .mockResolvedValueOnce({
+        rows: [{ id: 'proj-1', name: 'Alpha', process_id: 'proc-1', status: 'active' }],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            node_id: 'node-1',
+            title: 'Start',
+            type: 'start',
+            status: 'not_started',
+            decision_result: null,
+            assigned_to: null,
+            notes: null,
+            started_at: null,
+            completed_at: null,
+          },
+        ],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({
+        rows: [],
+        rowCount: 0,
+      });
+
+    const res = await request(app, 'GET', '/api/projects/proj-1/brief');
+
+    expect(res.status).toBe(200);
+    expect((res.body as { upcoming: string[] }).upcoming).toEqual(['Start']);
+  });
+
   it('returns 404 when the project does not exist', async () => {
     vi.mocked(db.query).mockResolvedValueOnce({ rows: [], rowCount: 0 });
 
@@ -246,53 +343,123 @@ describe('Project brief route', () => {
     expect(res.status).toBe(404);
     expect((res.body as { error: string }).error).toContain('Project not found');
   });
-});
 
-describe('Project detail current nodes', () => {
-  let app: Express;
-
-  beforeEach(() => {
-    app = createTestApp();
-    vi.clearAllMocks();
-  });
-
-  it('treats initialized root/start nodes as current work', async () => {
+  it('returns only in-progress and actually ready nodes in currentNodes', async () => {
     vi.mocked(db.query)
       .mockResolvedValueOnce({
-        rows: [
-          {
-            id: 'proj-1',
-            name: 'Alpha',
-            process_id: 'proc-1',
-            process_name: 'Launch process',
-            status: 'active',
-          },
-        ],
+        rows: [{ id: 'proj-1', name: 'Alpha', process_id: 'proc-1', status: 'active' }],
         rowCount: 1,
       })
-      .mockResolvedValueOnce({ rows: [], rowCount: 0 })
-      .mockResolvedValueOnce({ rows: [], rowCount: 0 })
+      .mockResolvedValueOnce({
+        rows: [],
+        rowCount: 0,
+      })
       .mockResolvedValueOnce({
         rows: [
           {
-            node_id: 'start-1',
-            node_title: 'Kickoff',
-            node_type: 'start',
-            status: 'not_started',
+            id: 'node-1',
+            title: 'Start',
+            type: 'start',
+            project_status: null,
+            decision_result: null,
+            form_data: null,
+            assigned_to: null,
+            notes: null,
+            started_at: null,
+            completed_at: null,
+            status_id: null,
+          },
+          {
+            id: 'node-2',
+            title: 'Document Schema',
+            type: 'task',
+            project_status: null,
+            decision_result: null,
+            form_data: null,
+            assigned_to: null,
+            notes: null,
+            started_at: null,
+            completed_at: null,
+            status_id: null,
+          },
+          {
+            id: 'node-3',
+            title: 'Build prototype',
+            type: 'task',
+            project_status: null,
+            decision_result: null,
+            form_data: null,
+            assigned_to: null,
+            notes: null,
+            started_at: null,
+            completed_at: null,
+            status_id: null,
           },
         ],
-        rowCount: 1,
+        rowCount: 3,
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          { source_node_id: 'node-1', target_node_id: 'node-2', id: 'edge-1' },
+          { source_node_id: 'node-2', target_node_id: 'node-3', id: 'edge-2' },
+        ],
+        rowCount: 2,
       });
 
     const res = await request(app, 'GET', '/api/projects/proj-1');
 
     expect(res.status).toBe(200);
-    expect((res.body as { currentNodes: unknown[] }).currentNodes).toHaveLength(1);
+    expect(vi.mocked(db.query).mock.calls[1]?.[0]).toContain(
+      'INSERT OR IGNORE INTO project_node_statuses'
+    );
+    expect((res.body as { currentNodes: Array<{ node_id: string }> }).currentNodes).toEqual([
+      {
+        node_id: 'node-1',
+        node_title: 'Start',
+        node_type: 'start',
+        status: 'not_started',
+      },
+    ]);
+  });
 
-    const currentNodesSql = vi.mocked(db.query).mock.calls[3][0] as string;
-    expect(currentNodesSql).toContain("COALESCE(pns.status, 'not_started') = 'not_started'");
-    expect(currentNodesSql).toContain('LEFT JOIN project_node_statuses pred_status');
-    expect(currentNodesSql).toContain("COALESCE(pred_status.status, 'not_started') NOT IN ('complete', 'skipped')");
-    expect(currentNodesSql).not.toContain("n.type = 'start' AND pns.status IS NULL");
+  it('backfills missing node status rows before returning tracker nodes', async () => {
+    vi.mocked(db.query)
+      .mockResolvedValueOnce({
+        rows: [{ id: 'proj-1', name: 'Alpha', process_id: 'proc-1', status: 'active' }],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({
+        rows: [],
+        rowCount: 0,
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'node-1',
+            title: 'Start',
+            type: 'start',
+            project_status: 'not_started',
+            decision_result: null,
+            form_data: {},
+            assigned_to: null,
+            notes: null,
+            started_at: null,
+            completed_at: null,
+            status_id: 'status-1',
+          },
+        ],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({
+        rows: [],
+        rowCount: 0,
+      });
+
+    const res = await request(app, 'GET', '/api/projects/proj-1');
+
+    expect(res.status).toBe(200);
+    expect((res.body as { nodes: Array<{ status_id: string | null }> }).nodes[0]?.status_id).toBe(
+      'status-1'
+    );
   });
 });
