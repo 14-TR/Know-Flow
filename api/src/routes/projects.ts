@@ -40,24 +40,53 @@ interface ProjectBriefEdgeRow {
   target_node_id: string;
 }
 
-function buildProjectBrief(
-  project: ProjectRow,
-  nodeRows: ProjectBriefRow[],
-  edgeRows: ProjectBriefEdgeRow[] = []
-): ProjectBrief {
-  const normalized = nodeRows.map((row) => ({
+interface ProjectNodeState extends ProjectBriefRow {
+  status: string;
+}
+
+interface BlockedProjectNodeState extends ProjectNodeState {
+  blockingTitles: string[];
+}
+
+interface ProjectRouteNodeRow {
+  id: string;
+  title: string;
+  type: string;
+  project_status: string | null;
+  decision_result: string | null;
+  assigned_to: string | null;
+  notes: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+async function ensureProjectNodeStatuses(projectId: string, processId: string): Promise<void> {
+  await query(
+    `INSERT OR IGNORE INTO project_node_statuses (project_id, node_id, status)
+     SELECT $1, id, 'not_started'
+     FROM nodes
+     WHERE process_id = $2`,
+    [projectId, processId]
+  );
+}
+
+function formatUpcomingReadyNode(title: string): string {
+  const trimmedTitle = title.trim();
+  if (/^start\b/i.test(trimmedTitle)) {
+    return trimmedTitle;
+  }
+
+  return `Start ${trimmedTitle}`;
+}
+
+function normalizeProjectNodeStates(nodeRows: ProjectBriefRow[]): ProjectNodeState[] {
+  return nodeRows.map((row) => ({
     ...row,
     status: row.status ?? 'not_started',
   }));
+}
 
-  const total = normalized.length;
-  const completed = normalized.filter((row) => row.status === 'complete').length;
-  const inProgress = normalized.filter((row) => row.status === 'in_progress').length;
-  const notStarted = normalized.filter((row) => row.status === 'not_started').length;
-  const skipped = normalized.filter((row) => row.status === 'skipped').length;
-  const progressPercent = total > 0 ? Math.round(((completed + skipped) / total) * 100) : 0;
-
-  const statusByNodeId = new Map(normalized.map((row) => [row.node_id, row.status]));
+function buildInboundByTargetId(edgeRows: ProjectBriefEdgeRow[]): Map<string, string[]> {
   const inboundByTargetId = new Map<string, string[]>();
 
   for (const edge of edgeRows) {
@@ -66,7 +95,15 @@ function buildProjectBrief(
     inboundByTargetId.set(edge.target_node_id, inbound);
   }
 
-  const readyNodes = normalized.filter((row) => {
+  return inboundByTargetId;
+}
+
+function getReadyProjectNodes(
+  normalized: ProjectNodeState[],
+  inboundByTargetId: Map<string, string[]>,
+  statusByNodeId: Map<string, string>
+): ProjectNodeState[] {
+  return normalized.filter((row) => {
     if (row.status !== 'not_started') {
       return false;
     }
@@ -77,29 +114,61 @@ function buildProjectBrief(
       return sourceStatus === 'complete' || sourceStatus === 'skipped';
     });
   });
+}
 
-  const blockedNodes = normalized
+function getDependencyBlockedProjectNodes(
+  normalized: ProjectNodeState[],
+  inboundByTargetId: Map<string, string[]>,
+  statusByNodeId: Map<string, string>
+): BlockedProjectNodeState[] {
+  const nodeById = new Map(normalized.map((row) => [row.node_id, row]));
+  const readyNodeIds = new Set(
+    getReadyProjectNodes(normalized, inboundByTargetId, statusByNodeId).map((row) => row.node_id)
+  );
+
+  return normalized
     .filter((row) => {
       if (row.status !== 'not_started') {
         return false;
       }
 
       const predecessors = inboundByTargetId.get(row.node_id) ?? [];
-      return (
-        predecessors.length > 0 &&
-        predecessors.some((sourceNodeId) => {
-          const sourceStatus = statusByNodeId.get(sourceNodeId) ?? 'not_started';
-          return sourceStatus !== 'complete' && sourceStatus !== 'skipped';
-        })
-      );
+      if (predecessors.length === 0) {
+        return false;
+      }
+
+      return predecessors.some((sourceNodeId) => {
+        const sourceNode = nodeById.get(sourceNodeId);
+        const sourceStatus = statusByNodeId.get(sourceNodeId) ?? 'not_started';
+
+        if (!sourceNode || sourceStatus === 'complete' || sourceStatus === 'skipped') {
+          return false;
+        }
+
+        if (sourceStatus === 'in_progress') {
+          return true;
+        }
+
+        return sourceNode.type === 'decision' && readyNodeIds.has(sourceNodeId);
+      });
     })
     .map((row) => {
       const blockingTitles = (inboundByTargetId.get(row.node_id) ?? [])
         .filter((sourceNodeId) => {
+          const sourceNode = nodeById.get(sourceNodeId);
           const sourceStatus = statusByNodeId.get(sourceNodeId) ?? 'not_started';
-          return sourceStatus !== 'complete' && sourceStatus !== 'skipped';
+
+          if (!sourceNode || sourceStatus === 'complete' || sourceStatus === 'skipped') {
+            return false;
+          }
+
+          if (sourceStatus === 'in_progress') {
+            return true;
+          }
+
+          return sourceNode.type === 'decision' && readyNodeIds.has(sourceNodeId);
         })
-        .map((sourceNodeId) => normalized.find((candidate) => candidate.node_id === sourceNodeId)?.title)
+        .map((sourceNodeId) => nodeById.get(sourceNodeId)?.title)
         .filter((title): title is string => Boolean(title));
 
       return {
@@ -107,6 +176,30 @@ function buildProjectBrief(
         blockingTitles,
       };
     });
+}
+
+function buildProjectBrief(
+  project: ProjectRow,
+  nodeRows: ProjectBriefRow[],
+  edgeRows: ProjectBriefEdgeRow[] = []
+): ProjectBrief {
+  const normalized = normalizeProjectNodeStates(nodeRows);
+
+  const total = normalized.length;
+  const completed = normalized.filter((row) => row.status === 'complete').length;
+  const inProgress = normalized.filter((row) => row.status === 'in_progress').length;
+  const notStarted = normalized.filter((row) => row.status === 'not_started').length;
+  const skipped = normalized.filter((row) => row.status === 'skipped').length;
+  const progressPercent = total > 0 ? Math.round(((completed + skipped) / total) * 100) : 0;
+
+  const statusByNodeId = new Map(normalized.map((row) => [row.node_id, row.status]));
+  const inboundByTargetId = buildInboundByTargetId(edgeRows);
+  const readyNodes = getReadyProjectNodes(normalized, inboundByTargetId, statusByNodeId);
+  const blockedNodes = getDependencyBlockedProjectNodes(
+    normalized,
+    inboundByTargetId,
+    statusByNodeId
+  );
 
   const blockers = Array.from(
     new Set([
@@ -137,7 +230,7 @@ function buildProjectBrief(
       .filter((row) => row.status === 'in_progress')
       .slice(0, 3)
       .map((row) => `Continue ${row.title}`),
-    ...readyNodes.slice(0, 3).map((row) => `Start ${row.title}`),
+    ...readyNodes.slice(0, 3).map((row) => formatUpcomingReadyNode(row.title)),
   ].slice(0, 3);
 
   const decisionNode = normalized.find(
@@ -266,6 +359,8 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     const project = projectResult.rows[0] as ProjectRow;
 
+    await ensureProjectNodeStatuses(id, project.process_id);
+
     // Get nodes with their statuses for this project
     const nodesResult = await query(
       `SELECT n.*,
@@ -297,41 +392,41 @@ router.get('/:id', async (req: Request, res: Response) => {
       [id, project.process_id]
     );
 
-    // Get nodes that are active or ready to become active.
-    // Root/start nodes with initialized not_started statuses must be included.
-    const currentNodesResult = await query(
-      `SELECT
-        n.id AS node_id,
-        n.title AS node_title,
-        n.type AS node_type,
-        COALESCE(pns.status, 'not_started') AS status
-      FROM nodes n
-      INNER JOIN projects p ON n.process_id = p.process_id
-      LEFT JOIN project_node_statuses pns ON pns.node_id = n.id AND pns.project_id = $1
-      WHERE p.id = $2
-      AND (
-        pns.status = 'in_progress'
-        OR (
-          COALESCE(pns.status, 'not_started') = 'not_started'
-          AND NOT EXISTS (
-            SELECT 1 FROM edges e
-            LEFT JOIN project_node_statuses pred_status
-              ON pred_status.node_id = e.source_node_id
-              AND pred_status.project_id = $3
-            WHERE e.target_node_id = n.id
-              AND e.process_id = p.process_id
-              AND COALESCE(pred_status.status, 'not_started') NOT IN ('complete', 'skipped')
-          )
-        )
-      )`,
-      [id, id, id]
+    const normalizedNodes = normalizeProjectNodeStates(
+      (nodesResult.rows as ProjectRouteNodeRow[]).map((row) => ({
+        node_id: row.id as string,
+        title: row.title as string,
+        type: row.type as string,
+        status: (row.project_status as string | null) ?? null,
+        decision_result: (row.decision_result as string | null) ?? null,
+        assigned_to: (row.assigned_to as string | null) ?? null,
+        notes: (row.notes as string | null) ?? null,
+        started_at: (row.started_at as string | null) ?? null,
+        completed_at: (row.completed_at as string | null) ?? null,
+      }))
     );
+    const inboundByTargetId = buildInboundByTargetId(
+      (edgesResult.rows as ProjectBriefEdgeRow[]).map((row) => ({
+        source_node_id: row.source_node_id as string,
+        target_node_id: row.target_node_id as string,
+      }))
+    );
+    const statusByNodeId = new Map(normalizedNodes.map((row) => [row.node_id, row.status]));
+    const currentNodes = [
+      ...normalizedNodes.filter((row) => row.status === 'in_progress'),
+      ...getReadyProjectNodes(normalizedNodes, inboundByTargetId, statusByNodeId),
+    ].map((row) => ({
+      node_id: row.node_id,
+      node_title: row.title,
+      node_type: row.type,
+      status: row.status,
+    }));
 
     res.json({
       ...project,
       nodes: nodesResult.rows,
       edges: edgesResult.rows,
-      currentNodes: currentNodesResult.rows,
+      currentNodes,
     });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
