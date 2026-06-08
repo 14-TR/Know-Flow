@@ -88,7 +88,7 @@ export default function ProjectTracker() {
     }
   };
 
-  const loadProject = async (projectId: string) => {
+  const loadProject = async (projectId: string): Promise<Project | null> => {
     try {
       const data = await getProject(projectId);
       setProject(data);
@@ -114,9 +114,11 @@ export default function ProjectTracker() {
 
       setNodes(flowNodes);
       setEdges(flowEdges);
+      return data;
     } catch (error) {
       console.error('Failed to load project:', error);
       toast('Failed to load project. Please refresh and try again.', 'error');
+      return null;
     } finally {
       setLoading(false);
     }
@@ -143,10 +145,10 @@ export default function ProjectTracker() {
 
     try {
       await updateProjectNodeStatus(statusId, updates);
-      await Promise.all([loadProject(id), loadProjectBrief(id)]);
+      const [freshProject] = await Promise.all([loadProject(id), loadProjectBrief(id)]);
 
-      if (project?.nodes) {
-        const updatedNode = project.nodes.find((n) => n.id === selectedNode.id);
+      if (freshProject?.nodes) {
+        const updatedNode = freshProject.nodes.find((n) => n.id === selectedNode.id);
         if (updatedNode) setSelectedNode(updatedNode);
       }
 

@@ -335,6 +335,100 @@ describe('Project brief route', () => {
     expect((res.body as { upcoming: string[] }).upcoming).toEqual(['Start']);
   });
 
+  it('keeps downstream decisions out of the brief while development is still in progress', async () => {
+    vi.mocked(db.query)
+      .mockResolvedValueOnce({
+        rows: [{ id: 'proj-1', name: 'Auth Feature', process_id: 'proc-1', status: 'active' }],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            node_id: 'scope',
+            title: 'Scope Confirmed',
+            type: 'task',
+            status: 'complete',
+            decision_result: null,
+            assigned_to: null,
+            notes: null,
+            started_at: null,
+            completed_at: null,
+          },
+          {
+            node_id: 'design',
+            title: 'Design Approved',
+            type: 'decision',
+            status: 'complete',
+            decision_result: 'Yes',
+            assigned_to: null,
+            notes: null,
+            started_at: null,
+            completed_at: null,
+          },
+          {
+            node_id: 'development',
+            title: 'Development',
+            type: 'task',
+            status: 'in_progress',
+            decision_result: null,
+            assigned_to: 'TR',
+            notes: null,
+            started_at: null,
+            completed_at: null,
+          },
+          {
+            node_id: 'code-review',
+            title: 'Code Review Passed?',
+            type: 'decision',
+            status: 'not_started',
+            decision_result: null,
+            assigned_to: null,
+            notes: null,
+            started_at: null,
+            completed_at: null,
+          },
+          {
+            node_id: 'qa',
+            title: 'QA Passed?',
+            type: 'decision',
+            status: 'not_started',
+            decision_result: null,
+            assigned_to: null,
+            notes: null,
+            started_at: null,
+            completed_at: null,
+          },
+        ],
+        rowCount: 5,
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          { source_node_id: 'scope', target_node_id: 'design', label: null, condition: null },
+          { source_node_id: 'design', target_node_id: 'development', label: 'Yes', condition: '{"value":"Yes"}' },
+          { source_node_id: 'development', target_node_id: 'code-review', label: null, condition: null },
+          { source_node_id: 'code-review', target_node_id: 'qa', label: 'Yes', condition: '{"value":"Yes"}' },
+        ],
+        rowCount: 4,
+      });
+
+    const res = await request(app, 'GET', '/api/projects/proj-1/brief');
+
+    expect(res.status).toBe(200);
+    expect((res.body as { suggested_next_action: { title: string } }).suggested_next_action.title).toBe(
+      'Development'
+    );
+    expect((res.body as { blockers: string[] }).blockers).toContain('In progress: Development — owner: TR');
+    expect((res.body as { blockers: string[] }).blockers).toContain(
+      'Blocked: Code Review Passed? waiting on Development'
+    );
+    expect((res.body as { blockers: string[] }).blockers).not.toContain(
+      'Decision pending: Code Review Passed?'
+    );
+    expect((res.body as { blockers: string[] }).blockers).not.toContain(
+      'Decision pending: QA Passed?'
+    );
+  });
+
   it('returns 404 when the project does not exist', async () => {
     vi.mocked(db.query).mockResolvedValueOnce({ rows: [], rowCount: 0 });
 
@@ -417,6 +511,91 @@ describe('Project brief route', () => {
         node_id: 'node-1',
         node_title: 'Start',
         node_type: 'start',
+        status: 'not_started',
+      },
+    ]);
+  });
+
+  it('filters inactive decision branches out of currentNodes after a completed choice', async () => {
+    vi.mocked(db.query)
+      .mockResolvedValueOnce({
+        rows: [{ id: 'proj-1', name: 'Alpha', process_id: 'proc-1', status: 'active' }],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({
+        rows: [],
+        rowCount: 0,
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'node-start',
+            title: 'Feature Requested',
+            type: 'start',
+            project_status: 'complete',
+            decision_result: null,
+            assigned_to: null,
+            notes: null,
+            started_at: null,
+            completed_at: null,
+            status_id: 'status-start',
+          },
+          {
+            id: 'node-decision',
+            title: 'In Scope?',
+            type: 'decision',
+            project_status: 'complete',
+            decision_result: 'Yes',
+            assigned_to: null,
+            notes: null,
+            started_at: null,
+            completed_at: null,
+            status_id: 'status-decision',
+          },
+          {
+            id: 'node-dev',
+            title: 'Development',
+            type: 'task',
+            project_status: 'not_started',
+            decision_result: null,
+            assigned_to: null,
+            notes: null,
+            started_at: null,
+            completed_at: null,
+            status_id: 'status-dev',
+          },
+          {
+            id: 'node-reject',
+            title: 'Feature Rejected',
+            type: 'end',
+            project_status: 'not_started',
+            decision_result: null,
+            assigned_to: null,
+            notes: null,
+            started_at: null,
+            completed_at: null,
+            status_id: 'status-reject',
+          },
+        ],
+        rowCount: 4,
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          { source_node_id: 'node-start', target_node_id: 'node-decision', id: 'edge-1', label: null, condition: '{}' },
+          { source_node_id: 'node-decision', target_node_id: 'node-dev', id: 'edge-2', label: 'Yes', condition: '{"field":"inScope","value":"Yes"}' },
+          { source_node_id: 'node-decision', target_node_id: 'node-reject', id: 'edge-3', label: 'No', condition: '{"field":"inScope","value":"No"}' },
+        ],
+        rowCount: 3,
+      });
+
+    const res = await request(app, 'GET', '/api/projects/proj-1');
+
+    expect(res.status).toBe(200);
+    expect((res.body as { currentNodes: Array<{ node_id: string }> }).currentNodes).toEqual([
+      {
+        node_id: 'node-dev',
+        node_title: 'Development',
+        node_type: 'task',
         status: 'not_started',
       },
     ]);

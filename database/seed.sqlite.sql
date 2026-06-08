@@ -414,6 +414,7 @@ WHERE project_id = 'p2222222-2222-4222-8222-222222222222' AND node_id = '6666666
 -- Construction Phase — in progress
 UPDATE project_node_statuses SET status = 'in_progress',
   started_at = datetime('now', '-14 days'),
+  completed_at = NULL,
   form_data = '{"startDate": "2025-12-01", "contractor": "Apex Construction LLC", "expectedCompletion": "2026-08-15"}'
 WHERE project_id = 'p2222222-2222-4222-8222-222222222222' AND node_id = '77777777-8888-9999-aaaa-bbbbbbbbbbbb';
 
@@ -481,5 +482,6 @@ WHERE project_id = 'p3333333-3333-4333-8333-333333333333' AND node_id = 'fa00000
 -- Development — in progress
 UPDATE project_node_statuses SET status = 'in_progress',
   started_at = datetime('now', '-3 days'),
+  completed_at = NULL,
   form_data = '{"branch": "feature/jwt-auth-refresh", "prUrl": "", "startDate": "2026-03-11", "devNotes": "DB schema migration complete. Working on refresh token rotation logic and Redis integration."}'
 WHERE project_id = 'p3333333-3333-4333-8333-333333333333' AND node_id = 'fa000007-0000-4000-8000-000000000007';
