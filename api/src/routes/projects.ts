@@ -38,6 +38,8 @@ interface ProjectBrief {
 interface ProjectBriefEdgeRow {
   source_node_id: string;
   target_node_id: string;
+  label?: string | null;
+  condition?: string | null;
 }
 
 interface ProjectNodeState extends ProjectBriefRow {
@@ -98,9 +100,64 @@ function buildInboundByTargetId(edgeRows: ProjectBriefEdgeRow[]): Map<string, st
   return inboundByTargetId;
 }
 
+function normalizeDecisionValue(value: string | null | undefined): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed ? trimmed.toLowerCase() : null;
+}
+
+function edgeMatchesDecision(edge: ProjectBriefEdgeRow, decisionResult: string | null): boolean {
+  const normalizedDecision = normalizeDecisionValue(decisionResult);
+  if (!normalizedDecision) {
+    return false;
+  }
+
+  const normalizedLabel = normalizeDecisionValue(edge.label);
+  if (normalizedLabel && normalizedLabel === normalizedDecision) {
+    return true;
+  }
+
+  if (!edge.condition) {
+    return false;
+  }
+
+  try {
+    const parsed = JSON.parse(edge.condition) as { value?: unknown };
+    return normalizeDecisionValue(typeof parsed.value === 'string' ? parsed.value : null) === normalizedDecision;
+  } catch {
+    return false;
+  }
+}
+
+function buildActiveInboundByTargetId(
+  normalized: ProjectNodeState[],
+  edgeRows: ProjectBriefEdgeRow[]
+): Map<string, string[]> {
+  const nodeById = new Map(normalized.map((row) => [row.node_id, row]));
+  const activeEdges = edgeRows.filter((edge) => {
+    const sourceNode = nodeById.get(edge.source_node_id);
+    if (!sourceNode || sourceNode.type !== 'decision') {
+      return true;
+    }
+
+    const decisionStatus = sourceNode.status;
+    if (decisionStatus !== 'complete' && decisionStatus !== 'skipped') {
+      return true;
+    }
+
+    return edgeMatchesDecision(edge, sourceNode.decision_result);
+  });
+
+  return buildInboundByTargetId(activeEdges);
+}
+
 function getReadyProjectNodes(
   normalized: ProjectNodeState[],
-  inboundByTargetId: Map<string, string[]>,
+  activeInboundByTargetId: Map<string, string[]>,
+  allInboundByTargetId: Map<string, string[]>,
   statusByNodeId: Map<string, string>
 ): ProjectNodeState[] {
   return normalized.filter((row) => {
@@ -108,7 +165,11 @@ function getReadyProjectNodes(
       return false;
     }
 
-    const predecessors = inboundByTargetId.get(row.node_id) ?? [];
+    const predecessors = activeInboundByTargetId.get(row.node_id) ?? [];
+    if (predecessors.length === 0) {
+      return (allInboundByTargetId.get(row.node_id) ?? []).length === 0;
+    }
+
     return predecessors.every((sourceNodeId) => {
       const sourceStatus = statusByNodeId.get(sourceNodeId) ?? 'not_started';
       return sourceStatus === 'complete' || sourceStatus === 'skipped';
@@ -118,12 +179,17 @@ function getReadyProjectNodes(
 
 function getDependencyBlockedProjectNodes(
   normalized: ProjectNodeState[],
-  inboundByTargetId: Map<string, string[]>,
+  activeInboundByTargetId: Map<string, string[]>,
   statusByNodeId: Map<string, string>
 ): BlockedProjectNodeState[] {
   const nodeById = new Map(normalized.map((row) => [row.node_id, row]));
   const readyNodeIds = new Set(
-    getReadyProjectNodes(normalized, inboundByTargetId, statusByNodeId).map((row) => row.node_id)
+    getReadyProjectNodes(
+      normalized,
+      activeInboundByTargetId,
+      activeInboundByTargetId,
+      statusByNodeId
+    ).map((row) => row.node_id)
   );
 
   return normalized
@@ -132,7 +198,7 @@ function getDependencyBlockedProjectNodes(
         return false;
       }
 
-      const predecessors = inboundByTargetId.get(row.node_id) ?? [];
+      const predecessors = activeInboundByTargetId.get(row.node_id) ?? [];
       if (predecessors.length === 0) {
         return false;
       }
@@ -153,7 +219,7 @@ function getDependencyBlockedProjectNodes(
       });
     })
     .map((row) => {
-      const blockingTitles = (inboundByTargetId.get(row.node_id) ?? [])
+      const blockingTitles = (activeInboundByTargetId.get(row.node_id) ?? [])
         .filter((sourceNodeId) => {
           const sourceNode = nodeById.get(sourceNodeId);
           const sourceStatus = statusByNodeId.get(sourceNodeId) ?? 'not_started';
@@ -193,22 +259,29 @@ function buildProjectBrief(
   const progressPercent = total > 0 ? Math.round(((completed + skipped) / total) * 100) : 0;
 
   const statusByNodeId = new Map(normalized.map((row) => [row.node_id, row.status]));
-  const inboundByTargetId = buildInboundByTargetId(edgeRows);
-  const readyNodes = getReadyProjectNodes(normalized, inboundByTargetId, statusByNodeId);
+  const allInboundByTargetId = buildInboundByTargetId(edgeRows);
+  const activeInboundByTargetId = buildActiveInboundByTargetId(normalized, edgeRows);
+  const readyNodes = getReadyProjectNodes(
+    normalized,
+    activeInboundByTargetId,
+    allInboundByTargetId,
+    statusByNodeId
+  );
   const blockedNodes = getDependencyBlockedProjectNodes(
     normalized,
-    inboundByTargetId,
+    activeInboundByTargetId,
     statusByNodeId
+  );
+  const readyNodeIds = new Set(readyNodes.map((row) => row.node_id));
+  const actionableDecisionNodes = normalized.filter(
+    (row) =>
+      row.type === 'decision' &&
+      (row.status === 'in_progress' || (row.status === 'not_started' && readyNodeIds.has(row.node_id)))
   );
 
   const blockers = Array.from(
     new Set([
-      ...normalized
-        .filter(
-          (row) =>
-            row.type === 'decision' &&
-            (row.status === 'not_started' || row.status === 'in_progress')
-        )
+      ...actionableDecisionNodes
         .slice(0, 2)
         .map((row) => `Decision pending: ${row.title}`),
       ...blockedNodes.slice(0, 2).map((row) => {
@@ -233,9 +306,7 @@ function buildProjectBrief(
     ...readyNodes.slice(0, 3).map((row) => formatUpcomingReadyNode(row.title)),
   ].slice(0, 3);
 
-  const decisionNode = normalized.find(
-    (row) => row.type === 'decision' && (row.status === 'not_started' || row.status === 'in_progress')
-  );
+  const decisionNode = actionableDecisionNodes[0] ?? null;
   const inProgressNode = normalized.find((row) => row.status === 'in_progress');
   const nextNode = readyNodes[0] ?? null;
 
@@ -405,16 +476,26 @@ router.get('/:id', async (req: Request, res: Response) => {
         completed_at: (row.completed_at as string | null) ?? null,
       }))
     );
-    const inboundByTargetId = buildInboundByTargetId(
-      (edgesResult.rows as ProjectBriefEdgeRow[]).map((row) => ({
-        source_node_id: row.source_node_id as string,
-        target_node_id: row.target_node_id as string,
-      }))
+    const allEdgeRows = (edgesResult.rows as ProjectBriefEdgeRow[]).map((row) => ({
+      source_node_id: row.source_node_id as string,
+      target_node_id: row.target_node_id as string,
+      label: (row.label as string | null | undefined) ?? null,
+      condition: (row.condition as string | null | undefined) ?? null,
+    }));
+    const allInboundByTargetId = buildInboundByTargetId(allEdgeRows);
+    const activeInboundByTargetId = buildActiveInboundByTargetId(
+      normalizedNodes,
+      allEdgeRows
     );
     const statusByNodeId = new Map(normalizedNodes.map((row) => [row.node_id, row.status]));
     const currentNodes = [
       ...normalizedNodes.filter((row) => row.status === 'in_progress'),
-      ...getReadyProjectNodes(normalizedNodes, inboundByTargetId, statusByNodeId),
+      ...getReadyProjectNodes(
+        normalizedNodes,
+        activeInboundByTargetId,
+        allInboundByTargetId,
+        statusByNodeId
+      ),
     ].map((row) => ({
       node_id: row.node_id,
       node_title: row.title,

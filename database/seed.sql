@@ -180,6 +180,6 @@ AND node_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
 -- Mark first decision as in progress
 UPDATE project_node_statuses
-SET status = 'in_progress', started_at = NOW()
+SET status = 'in_progress', started_at = NOW(), completed_at = NULL
 WHERE project_id = 'p1111111-1111-1111-1111-111111111111'
 AND node_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
