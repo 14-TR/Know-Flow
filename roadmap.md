@@ -21,9 +21,8 @@
 7. Packaging hygiene - keep README, changelog, screenshots, and roadmap synchronized after each merged demo-readiness slice.
 
 ## Constraints
-
-- Public GitHub repo; do not commit private hostnames, tailnet IPs, tokens, or internal URLs.
-- All work on `jig/*` branches, PRs to main.
-- SQLite backend, no external DB dependencies.
-- Tests must pass for touched surfaces.
-- Combined server defaults to localhost on port 5555; set `PROJECTIQ_HOST` locally for a private network interface, but do not commit private bind hosts or demo URLs.
+- Public GitHub repo; do not commit private hostnames, tailnet IPs, tokens, or internal URLs
+- All work on `jig/*` branches, PRs to main
+- SQLite backend, no external DB dependencies
+- Tests must pass (482+)
+- Combined server defaults to localhost on port 5555; set `PROJECTIQ_HOST` locally for a private network interface
