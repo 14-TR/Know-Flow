@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { seedDemoData } from '../services/api';
 
 const DISMISSED_KEY = 'piq_onboarding_dismissed';
 
@@ -28,8 +29,7 @@ export default function OnboardingBanner({ onDismiss, firstProcessId }: Onboardi
   const handleLoadDemo = async () => {
     setSeedStatus('loading');
     try {
-      const res = await fetch('/api/demo/seed', { method: 'POST' });
-      if (!res.ok) throw new Error('Failed');
+      await seedDemoData();
       setSeedStatus('done');
       // Reload page to show new data
       setTimeout(() => window.location.reload(), 800);

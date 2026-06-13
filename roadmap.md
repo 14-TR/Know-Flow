@@ -4,6 +4,19 @@
 
 **Goal:** Polish to demo-ready quality.
 
+## June 2026 refinement focus
+
+ProjectIQ is past the "add more surface area" phase. The next wins should come
+from tightening the current demo loop so it feels intentional, fast, and calm
+in front of another person.
+
+- Prioritize interaction polish, mobile fit, and failure-state clarity over net-new features.
+- Treat seeded demo reliability as a first-class product requirement.
+- Keep performance work measurement-led: profile first, optimize only where the
+  fresh numbers say the app feels slow.
+- Prefer packaging improvements that shorten the path from "open app" to
+  "understand value" for an interviewer or first user.
+
 ## Current Demo-Readiness Status
 
 - Done: onboarding flow (#63), demo seed safety (#72), calendar drag-to-reschedule (#67), export/import docs and README screenshots (#69), Database Viewer pagination (#71), dashboard workflow/attention signals (#73, #74, #75, #76, #77), and private-host redaction (#68).
