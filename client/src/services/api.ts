@@ -494,3 +494,8 @@ export interface DashboardData {
 }
 
 export const getDashboard = () => fetchApi<DashboardData>('/dashboard');
+
+export const seedDemoData = () =>
+  fetchApi<{ message: string; processId?: string; projectId?: string }>('/demo/seed', {
+    method: 'POST',
+  });
