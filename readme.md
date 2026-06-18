@@ -111,6 +111,7 @@ node server.mjs
 
 - App + API proxy: http://localhost:5555
 - Override the bind host only for private local testing with `PROJECTIQ_HOST`; do not put private hostnames or IPs in committed docs or public PR text.
+- Need a tight first-user walkthrough? Use [docs/first-user-validation-packet.md](docs/first-user-validation-packet.md) for the seeded demo script, expected data state, and recovery notes.
 
 ### Option 2: Docker
 

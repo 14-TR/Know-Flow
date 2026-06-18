@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import './DatabaseViewer.css';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
+const PAGE_SIZE = 50;
 
 interface TableCounts {
   [key: string]: number;
