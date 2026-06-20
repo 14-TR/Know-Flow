@@ -7,6 +7,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "check:calendar-mobile": "node ../scripts/check-calendar-mobile-layout.mjs",
     "check:dashboard-attention": "node ../scripts/check-dashboard-attention-layout.mjs"
   },
   "dependencies": {

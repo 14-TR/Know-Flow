@@ -85,6 +85,26 @@ describe('Dashboard route', () => {
       if (sql.includes("status = 'in_progress'")) {
         return { get: () => ({ count: 0 }) };
       }
+      if (sql.includes('AS ready_nodes') && sql.includes('AS blocked_nodes')) {
+        return { get: () => ({ ready_nodes: 1, blocked_nodes: 1 }) };
+      }
+      if (sql.includes('blocking_predecessors') && sql.includes('AS attention_type')) {
+        return {
+          all: () => [
+            {
+              project_id: 'proj-1',
+              project_name: 'Demo Project',
+              node_id: 'node-1',
+              title: 'Review intake',
+              type: 'task',
+              attention_type: 'ready',
+              blocker_count: 0,
+              blocker_titles: '',
+              reason: 'No predecessors; ready to start',
+            },
+          ],
+        };
+      }
 
       throw new Error(`Unexpected SQL: ${sql}`);
     });
@@ -95,6 +115,9 @@ describe('Dashboard route', () => {
     expect((res.body as { recentProcesses: unknown[] }).recentProcesses).toHaveLength(1);
     expect((res.body as { processes: unknown[] }).processes).toHaveLength(1);
     expect((res.body as { projects: unknown[] }).projects).toHaveLength(0);
+    expect((res.body as { stats: { readyNodes: number; blockedNodes: number } }).stats.readyNodes).toBe(1);
+    expect((res.body as { stats: { readyNodes: number; blockedNodes: number } }).stats.blockedNodes).toBe(1);
+    expect((res.body as { attentionItems: unknown[] }).attentionItems).toHaveLength(1);
 
     const recentProcessSql = sqlStatements.find((sql) => sql.includes('FROM processes p'));
     expect(recentProcessSql).toContain('e.source_node_id = n.id');

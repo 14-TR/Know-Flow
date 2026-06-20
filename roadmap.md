@@ -27,7 +27,7 @@ in front of another person.
 
 1. Mobile-responsive everything - Dashboard first-run/mobile controls now have a layout guard; continue the fresh iPhone-width pass across ProcessEditor, Graph Explorer, Project Tracker, Calendar, and Database Viewer.
 2. ProcessEditor polish - revisit the old glass-pass branch only as design reference, then rebuild any still-useful improvements from current `main`.
-3. First-user validation packet - create a short local demo script with screenshots, expected seeded data state, and failure-recovery notes for interview/demo use.
+3. First-user validation packet - shipped in `docs/first-user-validation-packet.md`; keep it aligned with the current seeded flow, screenshots, and recovery path.
 4. Performance audit - measure current initial load and route chunks after the recent dashboard work; only optimize regressions found in the fresh measurement.
 5. Error handling polish - audit remaining API/load/action failures for graceful UI states after the recent modal/toast pass.
 6. Keyboard shortcuts follow-up - verify shortcut discoverability and conflicts in current routes rather than assuming the March 2026 shortcut set is still complete.
