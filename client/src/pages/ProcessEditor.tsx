@@ -564,7 +564,7 @@ function ProcessEditorInner() {
           <MiniMap />
           <Background variant={BackgroundVariant.Dots} gap={20} />
 
-          <Panel position="top-left">
+          <Panel position="top-left" className="process-editor-panel process-editor-build-panel">
             <div className="panel toolbar process-command-bar">
               <div className="process-command-bar__header">
                 <button
@@ -624,7 +624,7 @@ function ProcessEditorInner() {
             </div>
           </Panel>
 
-          <Panel position="top-right">
+          <Panel position="top-right" className="process-editor-panel process-editor-layout-panel">
             <div className="panel toolbar layout-toolbar command-actions-panel">
               <div className="toolbar-section">
                 <span className="toolbar-label">Layout</span>

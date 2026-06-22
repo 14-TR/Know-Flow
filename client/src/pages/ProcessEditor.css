@@ -19,6 +19,7 @@
 
 .process-command-bar {
   min-width: 560px;
+  max-width: calc(100vw - 2rem);
   padding: 0.9rem 1rem;
   display: flex;
   flex-direction: column;
@@ -56,6 +57,7 @@
   color: var(--text-primary);
   letter-spacing: -0.02em;
   max-width: none;
+  overflow-wrap: anywhere;
 }
 
 .toolbar-status-cluster {
@@ -103,9 +105,16 @@
   gap: 0.5rem;
 }
 
+.toolbar-node-actions .btn,
+.command-action-grid .btn {
+  min-width: 0;
+  white-space: normal;
+}
+
 .command-actions-panel {
   padding: 0.85rem 0.95rem;
   min-width: 220px;
+  max-width: calc(100vw - 2rem);
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -172,6 +181,7 @@
 
 .command-center-panel {
   width: 360px;
+  max-width: calc(100vw - 2rem);
   overflow: hidden;
 }
 
@@ -326,11 +336,36 @@
 }
 
 @media (max-width: 480px) {
+  .process-editor-panel {
+    max-width: calc(100vw - 1.5rem);
+  }
+
+  .process-editor-build-panel {
+    left: 0.75rem !important;
+    right: 0.75rem !important;
+    top: 0.75rem !important;
+  }
+
+  .process-editor-layout-panel {
+    left: 0.75rem !important;
+    right: 0.75rem !important;
+    top: 14.75rem !important;
+  }
+
   .process-command-bar,
-  .command-actions-panel,
-  .command-center-panel {
+  .command-actions-panel {
     width: calc(100vw - 1.5rem);
     min-width: 0;
+    max-width: calc(100vw - 1.5rem);
+  }
+
+  .command-center-panel {
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    width: auto;
+    max-width: none;
+    max-height: min(68vh, calc(100vh - 1.5rem));
   }
 
   .toolbar-process-name {
@@ -338,12 +373,23 @@
   }
 
   .toolbar-node-actions,
-  .command-action-grid,
   .panel-form-actions,
   .nep-fields-header,
   .nep-field-meta {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .toolbar-node-actions,
+  .command-action-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .toolbar-node-actions .btn,
+  .command-action-grid .btn {
+    width: 100%;
+    padding-inline: 0.5rem;
   }
 
   .toolbar-divider,
