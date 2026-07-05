@@ -175,10 +175,8 @@ export default function Calendar() {
 
   const handleGanttMouseDown = useCallback((e: React.MouseEvent, node: CalNode, totalDays: number) => {
     e.stopPropagation();
-    const wrap = ganttWrapRef.current;
-    if (!wrap) return;
-    const LABEL_W = 220;
-    const trackWidth = wrap.clientWidth - LABEL_W;
+    const track = (e.currentTarget as HTMLElement).closest('.gantt-track') as HTMLElement | null;
+    const trackWidth = track?.clientWidth || 0;
     if (trackWidth <= 0) return;
     ganttDragRef.current = { nodeId: node.node_id, startX: e.clientX, originalDate: node.due_date!, totalDays, trackWidth };
     setGanttDragNodeId(node.node_id);
