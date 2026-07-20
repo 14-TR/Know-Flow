@@ -58,6 +58,9 @@ ProjectIQ lets you define reusable process templates as directed graphs, then in
 
 Captured from the current combined-server demo with seeded sample data.
 
+Need a live walkthrough checklist before reusing these images in an interview or portfolio demo?
+Use the [first-user validation packet](docs/first-user-validation-packet.md).
+
 ### Process Templates
 Browse and manage reusable workflow templates.
 
@@ -110,6 +113,7 @@ node server.mjs
 ```
 
 - App + API proxy: http://localhost:5555
+- If `5555` is already in use by another local tool, rerun with `PROJECTIQ_PORT=<open-port> node server.mjs` and use that port for the demo instead of forcing a restart blind.
 - Override the bind host only for private local testing with `PROJECTIQ_HOST`; do not put private hostnames or IPs in committed docs or public PR text.
 - Need a tight first-user walkthrough? Use [docs/first-user-validation-packet.md](docs/first-user-validation-packet.md) for the seeded demo script, expected data state, and recovery notes.
 
