@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - Hardened first-run Dashboard and onboarding controls for narrow mobile screens, including wrapping setup CTAs, stacked onboarding actions, and stable quick-action tile heights.
 - Reconciled the demo-readiness roadmap with the current merged GitHub history so future slices start from current `main` instead of stale completed work.
+- Improved `server.mjs` port-conflict handling so combined-demo startup explains how to recover from a non-ProjectIQ process already using the app port, and aligned the demo docs with the `PROJECTIQ_PORT` fallback.
 
 ---
 

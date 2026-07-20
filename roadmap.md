@@ -19,7 +19,7 @@ in front of another person.
 
 ## Current Demo-Readiness Status
 
-- Done: onboarding flow (#63), demo seed safety (#72), calendar drag-to-reschedule (#67), export/import docs and README screenshots (#69), Database Viewer pagination (#71), dashboard workflow/attention signals (#73, #74, #75, #76, #77), and private-host redaction (#68).
+- Done: onboarding flow (#63), demo seed safety (#72), calendar drag-to-reschedule (#67), export/import docs and README screenshots (#69), Database Viewer pagination (#71), dashboard workflow/attention signals (#73, #74, #75, #76, #77), private-host redaction (#68), and the first-user validation packet (`docs/first-user-validation-packet.md`).
 - In review outside this app repo: native ProjectIQ graph traversal validation in `14-TR/tr-jig` PR #91.
 - No open `14-TR/Know-Flow` PRs as of the 2026-05-25 roadmap reconciliation.
 

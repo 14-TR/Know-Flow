@@ -156,6 +156,16 @@ curl -s http://localhost:5555/api/demo/status
 
 If `/api/demo/status` does not answer, rebuild and restart the combined server before the walkthrough.
 
+### If `server.mjs` reports `EADDRINUSE`
+
+If port `5558` is occupied, `server.mjs` checks `http://127.0.0.1:5558/api/health`
+and reuses that listener only when it is already a healthy ProjectIQ API.
+Otherwise, stop the conflicting local process before continuing.
+
+If port `5555` is occupied by another local tool, stop that process or rerun with
+`PROJECTIQ_PORT=<open-port> node server.mjs` and use that port consistently for
+the walkthrough.
+
 ### If the local state is noisy
 
 This repo tolerates extra local data, but the seeded process/project path should still be visible.
