@@ -8,7 +8,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "check:dashboard-attention": "node ../scripts/check-dashboard-attention-layout.mjs",
-    "check:process-editor-mobile": "node ../scripts/check-process-editor-mobile-layout.mjs"
+    "check:process-editor-mobile": "node ../scripts/check-process-editor-mobile-layout.mjs",
+    "check:project-tracker-mobile": "node ../scripts/check-project-tracker-mobile-layout.mjs"
   },
   "dependencies": {
     "@xyflow/react": "^12.0.0",
